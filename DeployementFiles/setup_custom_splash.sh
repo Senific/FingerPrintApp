@@ -29,7 +29,7 @@ echo "📝 Writing Plymouth theme file..."
 sudo tee "$PLYMOUTH_FILE" > /dev/null <<EOF
 [Plymouth Theme]
 Name=My Splash
-Description=Custom boot splash screen
+Description=Senific (PVT) Ltd / www.senific.com
 ModuleName=script
 
 [script]
