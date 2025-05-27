@@ -1,41 +1,48 @@
 #!/bin/bash
 
-# Automatically detect current username and paths
-USER_HOME=$(eval echo "~$USER")
-APP_DIR="$(pwd)"
-VENV_DIR="$APP_DIR/fingerprint-env"
-PYTHON_BIN="$VENV_DIR/bin/python"
-REQUIREMENTS_FILE="$APP_DIR/requirements.txt"
+set -e
 
-echo "Setting up FingerPrintApp"
-echo "App Path:        $APP_DIR"
-echo "Virtual Env Dir: $VENV_DIR"
+APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ENV_DIR="$HOME/fingerprint-env"
+PYTHON="$ENV_DIR/bin/python"
+SERVICE_NAME="kiosk.service"
 
-read -p "Proceed with setup? (y/n): " confirm
-if [[ "$confirm" != "y" ]]; then
-    echo "Setup aborted."
-    exit 1
-fi
-
-# Update and install dependencies
+echo "🔧 Installing system dependencies..."
 sudo apt update
-sudo apt install -y git python3 python3-pip python3-venv
+sudo apt install -y git python3-full python3-venv python3-pip
 
-# Create and activate virtual environment
-if [ ! -d "$VENV_DIR" ]; then
-    echo "Creating virtual environment..."
-    python3 -m venv "$VENV_DIR"
-fi
+echo "🐍 Creating virtual environment at $ENV_DIR..."
+python3 -m venv "$ENV_DIR"
 
-# Activate and install Python dependencies
-echo "Installing Python dependencies..."
-"$VENV_DIR/bin/pip" install --upgrade pip
-"$VENV_DIR/bin/pip" install -r "$REQUIREMENTS_FILE"
+echo "📦 Installing Python dependencies..."
+source "$ENV_DIR/bin/activate"
+pip install --upgrade pip
+pip install kivy
 
-echo "Setup complete."
+echo "🛠️ Setting up systemd service..."
 
-# Ask to enable kiosk mode now
-read -p "Do you want to set this app to launch at boot in kiosk mode? (y/n): " kiosk_confirm
-if [[ "$kiosk_confirm" == "y" ]]; then
-    sudo bash "$APP_DIR/setup-kiosk.sh"
-fi
+SERVICE_PATH="/etc/systemd/system/$SERVICE_NAME"
+
+sudo tee "$SERVICE_PATH" > /dev/null <<EOF
+[Unit]
+Description=Kivy App Kiosk
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=$APP_DIR
+ExecStart=$PYTHON $APP_DIR/main.py
+Restart=always
+User=$USER
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+echo "🔁 Reloading systemd and enabling service..."
+sudo systemctl daemon-reload
+sudo systemctl enable "$SERVICE_NAME"
+sudo systemctl restart "$SERVICE_NAME"
+
+echo "✅ Setup complete! Use 'sudo systemctl status $SERVICE_NAME' to check status."
