@@ -44,7 +44,7 @@ class IdleScreen(FloatLayout):
             color=(0.9, 0.9, 0.9, 1),
             size_hint=(1, None),
             height=24,
-            pos_hint={"center_x": 0.5, "y": .4 }  # Slightly above bottom
+            pos_hint={"center_x": 0.5, "y": .2 }  # Slightly above bottom
         )
 
         self.add_widget(company_label)
