@@ -52,5 +52,6 @@ $PIP_BIN install kivy[full]
 
 # === STEP 3: Run the app ===
 echo "Running the Kivy app..."
+cd ..
 cd "$APP_DIR"
 $PYTHON_BIN main.py
