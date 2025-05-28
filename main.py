@@ -1,3 +1,11 @@
+import os
+
+# Use framebuffer console (fbcon)
+os.environ["KIVY_BCM_DISPMANX_ID"] = "2"       # For /dev/fb1
+os.environ["KIVY_WINDOW"] = "egl_rpi"
+os.environ["SDL_FBDEV"] = "/dev/fb1"
+os.environ["SDL_VIDEODRIVER"] = "fbcon"
+
 from kivy.app import App
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.image import Image

@@ -19,6 +19,9 @@ source "$ENV_DIR/bin/activate"
 pip install --upgrade pip
 pip install kivy
 
+
+
+
 echo "🛠️ Setting up systemd service..."
 
 SERVICE_PATH="/etc/systemd/system/$SERVICE_NAME"
