@@ -13,6 +13,7 @@ class MenuScreen(Screen):
         btn_update = Button(text="Update", size_hint=(1, 0.2))
         btn_back = Button(text="Back", size_hint=(1, 0.2))
         
+        btn_wifi.bind(on_release=self.on_wifi)
         btn_back.bind(on_release=self.go_back)
         
         layout.add_widget(btn_set_finger)
@@ -27,7 +28,6 @@ class MenuScreen(Screen):
         # Here you can switch to fingerprint setup screen or any other action
 
     def on_wifi(self, instance):
-        print("Wifi button pressed")
         # Switch to wifi screen, for example:
         self.manager.current = 'wifi'
 

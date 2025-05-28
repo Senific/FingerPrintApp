@@ -1,19 +1,13 @@
-from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition, FloatLayout 
-from kivy.app import App 
+from kivy.uix.screenmanager import Screen
+from kivy.uix.button import Button
+from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
-from kivy.uix.button import Button
-from kivy.clock import Clock
-from kivy.core.window import Window
 from subprocess import run, CalledProcessError
-
-Window.size = (480, 320)
-Window.fullscreen = False
 
 class WifiConnectScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        # Use a layout inside this screen
         layout = FloatLayout()
 
         # SSID Input
@@ -23,7 +17,7 @@ class WifiConnectScreen(Screen):
             size_hint=(0.8, 0.1),
             pos_hint={"center_x": 0.5, "center_y": 0.7},
         )
-        self.add_widget(self.ssid_input)
+        layout.add_widget(self.ssid_input)
 
         # Password Input
         self.pass_input = TextInput(
@@ -33,7 +27,7 @@ class WifiConnectScreen(Screen):
             size_hint=(0.8, 0.1),
             pos_hint={"center_x": 0.5, "center_y": 0.55},
         )
-        self.add_widget(self.pass_input)
+        layout.add_widget(self.pass_input)
 
         # Status Label
         self.status_label = Label(
@@ -45,7 +39,7 @@ class WifiConnectScreen(Screen):
             valign='middle'
         )
         self.status_label.bind(size=self._update_text_size)
-        self.add_widget(self.status_label)
+        layout.add_widget(self.status_label)
 
         # Connect Button
         connect_btn = Button(
@@ -54,7 +48,18 @@ class WifiConnectScreen(Screen):
             pos_hint={"center_x": 0.5, "center_y": 0.25},
         )
         connect_btn.bind(on_press=self.connect_wifi)
-        self.add_widget(connect_btn)
+        layout.add_widget(connect_btn)
+
+        # Back Button - just below the Connect Button
+        back_btn = Button(
+            text="Back",
+            size_hint=(0.5, 0.1),
+            pos_hint={"center_x": 0.5, "center_y": 0.12}  # slightly below connect button
+        )
+        back_btn.bind(on_press=self.go_back)
+        layout.add_widget(back_btn)
+
+        self.add_widget(layout)
 
     def _update_text_size(self, instance, value):
         instance.text_size = instance.size
@@ -67,13 +72,11 @@ class WifiConnectScreen(Screen):
             self.status_label.text = "SSID cannot be empty"
             return
 
-        # Update wpa_supplicant.conf
         try:
             self.status_label.text = "Updating Wi-Fi config..."
             self.update_wifi_config(ssid, password)
             self.status_label.text = "Wi-Fi config updated. Restarting interface..."
 
-            # Restart Wi-Fi interface (may require sudo)
             run(["sudo", "wpa_cli", "-i", "wlan0", "reconfigure"], check=True)
 
             self.status_label.text = "Wi-Fi connected (or reconnecting)."
@@ -83,39 +86,29 @@ class WifiConnectScreen(Screen):
             self.status_label.text = f"Error: {e}"
 
     def update_wifi_config(self, ssid, password):
-        # Backup old config
         run(["sudo", "cp", "/etc/wpa_supplicant/wpa_supplicant.conf", "/etc/wpa_supplicant/wpa_supplicant.conf.bak"], check=True)
 
-        # Construct new network block
         network_block = '\nnetwork={\n'
         network_block += f'    ssid="{ssid}"\n'
         if password:
             network_block += f'    psk="{password}"\n'
         else:
-            network_block += '    key_mgmt=NONE\n'  # open network
+            network_block += '    key_mgmt=NONE\n'
         network_block += '}\n'
 
-        # Read current file, append new network block at end
         with open("/etc/wpa_supplicant/wpa_supplicant.conf", "r") as f:
             content = f.read()
 
         if "network={" in content:
-            # Naive approach: append new network block at the end
             new_content = content.strip() + network_block
         else:
-            # No network block? Just add it.
             new_content = content + network_block
 
-        # Write back
         with open("/tmp/wpa_supplicant.conf.tmp", "w") as f:
             f.write(new_content)
 
-        # Move temp file to original with sudo
         run(["sudo", "mv", "/tmp/wpa_supplicant.conf.tmp", "/etc/wpa_supplicant/wpa_supplicant.conf"], check=True)
 
-class WifiApp(App):
-    def build(self):
-        return WifiConnectScreen()
-
-if __name__ == "__main__":
-    WifiApp().run()
+    def go_back(self, instance):
+        if self.manager:
+            self.manager.current = "menu"
