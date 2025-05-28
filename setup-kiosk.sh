@@ -1,76 +1,45 @@
 #!/bin/bash
 
-set -e
+# KIOSK CONFIGURATION SCRIPT
 
-echo "🛠️  Setting up kiosk environment..."
+APP_DIR="/home/Admin/FingerPrintApp"
+VENV_DIR="/home/Admin/fingerprint-env"
+SERVICE_NAME="kiosk"
+USER_NAME="Admin"
 
-# 1. Install required packages
-sudo apt update
-sudo apt install -y python3-full python3-venv python3-pip git libegl1 libgles2 mesa-utils xinit
+echo "Creating systemd service for kiosk..."
 
-# 2. Create Python virtual environment
-cd /home/Admin
-if [ ! -d fingerprint-env ]; then
-  python3 -m venv fingerprint-env
-fi
-source fingerprint-env/bin/activate
-
-# 3. Install Python dependencies
-cd /home/Admin/FingerPrintApp
-if [ -f requirements.txt ]; then
-  pip install --upgrade pip
-  pip install -r requirements.txt
-else
-  echo "⚠️  No requirements.txt found!"
-fi
-
-# 4. Create kiosk systemd service
-echo "📺 Creating systemd kiosk service..."
-cat <<EOF | sudo tee /etc/systemd/system/kiosk.service
+# Create systemd service
+sudo tee /etc/systemd/system/${SERVICE_NAME}.service > /dev/null <<EOF
 [Unit]
-Description=Kivy App Kiosk
-After=network.target
+Description=Kiosk Fingerprint App
+After=multi-user.target
+Wants=graphical.target
 
 [Service]
 Type=simple
-ExecStart=/home/Admin/fingerprint-env/bin/python /home/Admin/FingerPrintApp/main.py
-WorkingDirectory=/home/Admin/FingerPrintApp
-Restart=on-failure
+User=${USER_NAME}
+WorkingDirectory=${APP_DIR}
+Environment=DISPLAY=
+Environment=PYTHONUNBUFFERED=1
+Environment=KIVY_METRICS_DENSITY=1
+Environment=KIVY_WINDOW=sdl2
+Environment=KIVY_GL_BACKEND=gl
+Environment=SDL_VIDEODRIVER=fbcon
+Environment=SDL_FBDEV=/dev/fb1
+ExecStart=${VENV_DIR}/bin/python3 ${APP_DIR}/main.py
+Restart=always
 RestartSec=5
-User=Admin
-Environment=DISPLAY=:0
-Environment=XAUTHORITY=/home/Admin/.Xauthority
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
+# Enable and start the service
 sudo systemctl daemon-reexec
 sudo systemctl daemon-reload
-sudo systemctl enable kiosk.service
-sudo systemctl restart kiosk.service
+sudo systemctl enable ${SERVICE_NAME}.service
+sudo systemctl start ${SERVICE_NAME}.service
 
-# 5. Enable auto-login to console
-echo "🔐 Enabling auto-login for user Admin..."
-sudo raspi-config nonint do_boot_behaviour B2
-
-# 6. Optional performance tweaks
-echo "⚡ Applying optional performance tweaks..."
-sudo sed -i '/^#.*disable_splash/ d' /boot/config.txt
-echo "disable_splash=1" | sudo tee -a /boot/config.txt
-
-# 7. Optional X11 auto-start via .bash_profile (Lite only)
-echo "🪟 Auto-starting X11 and Kivy app at login..."
-if ! grep -q "xinit" /home/Admin/.bash_profile 2>/dev/null; then
-  echo "[[ -z \$DISPLAY && \$XDG_VTNR -eq 1 ]] && xinit" >> /home/Admin/.bash_profile
-fi
-
-# 8. Create minimal .xinitrc for kiosk
-cat <<EOF > /home/Admin/.xinitrc
-#!/bin/bash
-exec /home/Admin/fingerprint-env/bin/python /home/Admin/FingerPrintApp/main.py
-EOF
-chmod +x /home/Admin/.xinitrc
-
-echo "✅ Kiosk setup complete. Reboot to test:"
-echo "    sudo reboot"
+echo "Kiosk service '${SERVICE_NAME}' has been installed and started."
+echo "Run 'sudo journalctl -u ${SERVICE_NAME} -f' to view live logs."

@@ -22,30 +22,5 @@ pip install kivy
 
 
 
-echo "🛠️ Setting up systemd service..."
-
-SERVICE_PATH="/etc/systemd/system/$SERVICE_NAME"
-
-sudo tee "$SERVICE_PATH" > /dev/null <<EOF
-[Unit]
-Description=Kivy App Kiosk
-After=network.target
-
-[Service]
-Type=simple
-WorkingDirectory=$APP_DIR
-ExecStart=$PYTHON $APP_DIR/main.py
-Restart=always
-User=$USER
-Environment=PYTHONUNBUFFERED=1
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-echo "🔁 Reloading systemd and enabling service..."
-sudo systemctl daemon-reload
-sudo systemctl enable "$SERVICE_NAME"
-sudo systemctl restart "$SERVICE_NAME"
-
-echo "✅ Setup complete! Use 'sudo systemctl status $SERVICE_NAME' to check status."
+echo "🛠️ Done..."
+ 
