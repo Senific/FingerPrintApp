@@ -1,5 +1,3 @@
- 
-
 from kivy.app import App
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.image import Image
@@ -56,7 +54,7 @@ class IdleScreen(FloatLayout):
         Clock.schedule_interval(self.update_clock, 1)
 
     def update_clock(self, dt):
-        self.clock_label.text = datetime.now().strftime("%H:%M:%S") + "AZ"
+        self.clock_label.text = datetime.now().strftime("%H:%M:%S") + "XXXXX"
 
     def _update_clock_label(self, instance, value):
         instance.text_size = instance.size
