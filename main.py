@@ -54,7 +54,7 @@ class IdleScreen(FloatLayout):
         Clock.schedule_interval(self.update_clock, 1)
 
     def update_clock(self, dt):
-        self.clock_label.text = datetime.now().strftime("%H:%M:%S") + "XXXXX"
+        self.clock_label.text = datetime.now().strftime("%H:%M:%S") + "Kas"
 
     def _update_clock_label(self, instance, value):
         instance.text_size = instance.size
