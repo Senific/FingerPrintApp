@@ -1,6 +1,7 @@
 import os
 import threading
 from subprocess import run, CalledProcessError
+from tkinter import Image
 from kivy.uix.screenmanager import Screen
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
@@ -12,6 +13,15 @@ class MenuScreen(Screen):
         super().__init__(**kwargs)
 
         layout = BoxLayout(orientation='vertical', padding=20, spacing=20)
+
+        background = Image(
+            source="assets/bg.jpg",
+            allow_stretch=True,
+            keep_ratio=False,
+            size_hint=(1, 1),
+            pos_hint={"x": 0, "y": 0}
+        )
+        self.add_widget(background)
 
         self.btn_set_finger = Button(text="Set Finger", size_hint=(1, 0.18))
         self.btn_wifi = Button(text="Wifi", size_hint=(1, 0.18))
