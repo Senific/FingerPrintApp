@@ -1,10 +1,11 @@
 import os
 
-# Use framebuffer console (fbcon)
-os.environ["KIVY_BCM_DISPMANX_ID"] = "2"       # For /dev/fb1
-os.environ["KIVY_WINDOW"] = "egl_rpi"
+# Force Kivy to use the framebuffer display
+os.environ["KIVY_WINDOW"] = "sdl2"
+os.environ["KIVY_TEXT"] = "sdl2"
 os.environ["SDL_FBDEV"] = "/dev/fb1"
 os.environ["SDL_VIDEODRIVER"] = "fbcon"
+
 
 from kivy.app import App
 from kivy.uix.floatlayout import FloatLayout
