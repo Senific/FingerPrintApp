@@ -16,7 +16,7 @@ fi
 cd ~/fbcp-ili9341
 mkdir -p build
 cd build
-cmake -DWAVESHARE_ILI9341=ON ..
+cmake -DWAVESHARE_ILI9341=ON -DSPI_BUS_CLOCK_DIVISOR=30 ..
 make -j$(nproc)
 
 # Optional: Enable SPI and configure to run on boot
