@@ -1,21 +1,20 @@
 from kivy.core.window import Window
 
-# Enable fullscreen mode automatically
-Window.fullscreen = True
+# Set window size BEFORE importing or running the app
+Window.size = (480, 320)
+Window.fullscreen = False  # Set to True if you want fullscreen
 
 from kivy.app import App
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.image import Image
 from kivy.uix.label import Label
 from kivy.clock import Clock
-from datetime import datetime 
- 
+from datetime import datetime
 
 class IdleScreen(FloatLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        # --- Background Image --- 
         background = Image(
             source="assets/bg.jpg",
             allow_stretch=True,
@@ -25,7 +24,6 @@ class IdleScreen(FloatLayout):
         )
         self.add_widget(background)
 
-        # --- Center Clock --- 
         self.clock_label = Label(
             text="00:00:00",
             font_size='48sp',
@@ -39,7 +37,6 @@ class IdleScreen(FloatLayout):
         self.clock_label.bind(size=self._update_clock_label)
         self.add_widget(self.clock_label)
 
-        # --- Screen resolution label below clock ---
         self.resolution_label = Label(
             text=f"Resolution: {Window.size[0]} x {Window.size[1]}",
             font_size='20sp',
@@ -53,7 +50,6 @@ class IdleScreen(FloatLayout):
         self.resolution_label.bind(size=self._update_clock_label)
         self.add_widget(self.resolution_label)
 
-        # --- Footer: Company Name --- 
         company_label = Label(
             text="SENIFIC (PVT) LTD - WWW.SENIFIC.COM / 076-4092662",
             font_size='12sp',
@@ -62,19 +58,17 @@ class IdleScreen(FloatLayout):
             color=(0.9, 0.9, 0.9, 1),
             size_hint=(1, None),
             height=24,
-            pos_hint={"center_x": 0.5, "y": .2 }  # Slightly above bottom
+            pos_hint={"center_x": 0.5, "y": .2}
         )
         self.add_widget(company_label)
- 
-        # Start the clock update
+
         Clock.schedule_interval(self.update_clock, 1)
 
     def update_clock(self, dt):
-        self.clock_label.text = datetime.now().strftime("%H:%M:%S") 
+        self.clock_label.text = datetime.now().strftime("%H:%M:%S")
 
     def _update_clock_label(self, instance, value):
         instance.text_size = instance.size
-
 
 class FingerprintApp(App):
     def build(self):
