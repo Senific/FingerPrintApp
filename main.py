@@ -1,5 +1,6 @@
 import logging
-logging.basicConfig(filename='/home/admin/app.log', level=logging.DEBUG)
+logging.basicConfig(filename='app.log', level=logging.DEBUG)
+
 
 
 from kivy.core.window import Window
