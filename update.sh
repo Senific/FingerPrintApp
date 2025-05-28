@@ -22,7 +22,14 @@ if [ -f requirements.txt ]; then
   pip3 install -r requirements.txt
 fi
 
-echo "🔁 Restarting kiosk.service..."
-sudo systemctl restart kiosk.service
+
+echo "💀 Killing old app instances..."
+pkill -f main.py
+
+echo "💀 Killing old X server if running..."
+pkill Xorg
+
+echo "🚀 Starting X server and app..."
+startx &
 
 echo "✅ Update complete."

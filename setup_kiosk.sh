@@ -1,51 +1,60 @@
 #!/bin/bash
 
 APP_PATH="/home/Admin/FingerPrintApp/main.py"
-START_SCRIPT="/home/Admin/start_kiosk.sh"
+APP_DIR="/home/Admin/FingerPrintApp"
+VENV_DIR="/home/Admin/my_venv"
+START_SCRIPT="/home/Admin/start_app.sh"
 XINITRC="/home/Admin/.xinitrc"
 SERVICE_FILE="/etc/systemd/system/kiosk.service"
+USER="Admin"
 
-# ✅ Ensure this script is run as the correct user
-if [ "$USER" != "Admin" ]; then
-  echo "❌ Please run this as user: Admin"
+# Check correct user
+if [ "$USER" != "$(whoami)" ]; then
+  echo "❌ Please run this script as user: $USER"
   exit 1
 fi
 
-echo "🔄 Updating system..."
+echo "🔄 Updating system and installing required packages..."
 sudo apt update
+sudo apt install -y xserver-xorg x11-xserver-utils xinit xterm git python3 python3-venv python3-pip
 
-echo "📦 Installing X11, Python, and Kivy system-wide..."
-sudo apt install -y xserver-xorg x11-xserver-utils xinit xterm python3-pip
-sudo apt install -y python3-kivy
+echo "🧹 Setting up Python virtual environment..."
+if [ ! -d "$VENV_DIR" ]; then
+  python3 -m venv "$VENV_DIR"
+fi
 
-echo "📝 Creating start script..."
+echo "📦 Installing Python dependencies in virtual environment..."
+source "$VENV_DIR/bin/activate"
+pip install --upgrade pip
+if [ -f "$APP_DIR/requirements.txt" ]; then
+  pip install -r "$APP_DIR/requirements.txt"
+fi
+deactivate
+
+echo "📝 Creating start_app.sh to launch app inside venv..."
 cat <<EOF > "$START_SCRIPT"
 #!/bin/bash
 export DISPLAY=:0
-export XAUTHORITY=/home/Admin/.Xauthority
-
-echo "🚀 Launching Kivy App..."
-python3 "$APP_PATH" 2>&1 | tee /home/Admin/kiosk_app.log
+source "$VENV_DIR/bin/activate"
+python3 "$APP_PATH"
 EOF
-
 chmod +x "$START_SCRIPT"
 
-echo "📝 Creating .xinitrc..."
+echo "📝 Creating .xinitrc to launch start_app.sh..."
 cat <<EOF > "$XINITRC"
 #!/bin/bash
 exec $START_SCRIPT
 EOF
-
 chmod +x "$XINITRC"
 
-echo "🛠️ Creating systemd kiosk.service..."
+echo "🛠️ Creating kiosk.service systemd unit..."
 sudo tee "$SERVICE_FILE" > /dev/null <<EOF
 [Unit]
-Description=Kiosk Mode
+Description=Kiosk Mode for $USER
 After=network.target
 
 [Service]
-User=Admin
+User=$USER
 Environment=DISPLAY=:0
 ExecStart=/usr/bin/xinit
 Restart=always
@@ -54,27 +63,29 @@ Restart=always
 WantedBy=multi-user.target
 EOF
 
-echo "🔁 Reloading and enabling kiosk.service..."
+echo "🔁 Reloading systemd daemon and enabling kiosk service..."
 sudo systemctl daemon-reexec
 sudo systemctl daemon-reload
 sudo systemctl enable kiosk.service
 sudo systemctl start kiosk.service
 
-echo "🔐 Enabling autologin for Admin on tty1..."
+echo "🔐 Setting up autologin on tty1 for $USER..."
 sudo mkdir -p /etc/systemd/system/getty@tty1.service.d
 
 sudo tee /etc/systemd/system/getty@tty1.service.d/autologin.conf > /dev/null <<EOF
 [Service]
 ExecStart=
-ExecStart=-/sbin/agetty --autologin Admin --noclear %I \$TERM
+ExecStart=-/sbin/agetty --autologin $USER --noclear %I \$TERM
 EOF
 
-echo "🚫 Disabling login prompts on other virtual terminals (tty2–tty6)..."
+echo "🚫 Disabling getty login prompts on tty2-tty6..."
 for tty in {2..6}; do
-    sudo systemctl disable getty@tty$tty.service
+  sudo systemctl disable getty@tty$tty.service
 done
 
-echo "🧹 Optional: Clean boot message line in /boot/cmdline.txt"
-sudo sed -i 's/$/ quiet loglevel=0 console=tty3/' /boot/cmdline.txt
+echo "🧹 Adding quiet boot to /boot/cmdline.txt..."
+if ! grep -q "quiet loglevel=0 console=tty3" /boot/cmdline.txt; then
+  sudo sed -i 's/$/ quiet loglevel=0 console=tty3/' /boot/cmdline.txt
+fi
 
-echo "✅ Kiosk setup complete. Reboot to start the Kivy app on boot."
+echo "✅ Setup complete! Please reboot the system to start kiosk mode."
