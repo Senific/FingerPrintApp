@@ -1,12 +1,8 @@
 import os
-# Configure Kivy for framebuffer (must come before importing kivy modules)
-os.environ["KIVY_NO_CONSOLELOG"] = "1"
-os.environ["KIVY_METRICS_DENSITY"] = "1"
-os.environ["KIVY_BCM_DISPMANX_ID"] = "1"
-os.environ["SDL_FBDEV"] = "/dev/fb1"
-os.environ["SDL_VIDEODRIVER"] = "fbcon"
+os.environ["KIVY_BCM_DISPMANX_DISPLAY"] = "1"
 os.environ["KIVY_WINDOW"] = "sdl2"
-os.environ["KIVY_GL_BACKEND"] = "sdl2"
+os.environ["SDL_FBDEV"] = "/dev/fb1"
+os.environ["KIVY_GL_BACKEND"] = "gl""
 
 from kivy.app import App
 from kivy.uix.floatlayout import FloatLayout
