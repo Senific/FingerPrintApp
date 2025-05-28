@@ -9,6 +9,8 @@ sudo apt-get upgrade -y
 echo "Installing required dependencies..."
 sudo apt-get install -y git bc
 
+cd ..
+
 echo "Cloning ILI9486 driver repository..."
 if [ ! -d "LCD-show" ]; then
     git clone https://github.com/goodtft/LCD-show.git

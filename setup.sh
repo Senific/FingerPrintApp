@@ -20,6 +20,19 @@ sudo apt install -y \
   gstreamer1.0-libav gstreamer1.0-alsa libmtdev-dev \
   libgl1-mesa-dev libgles2-mesa-dev xclip xsel libjpeg-dev
 
+sudo apt update
+sudo apt-get install -y \
+  libavcodec-dev \
+  libavdevice-dev \
+  libavfilter-dev \
+  libavformat-dev \
+  libavutil-dev \
+  libswscale-dev \
+  libswresample-dev \
+  libpostproc-dev \
+  libsdl2-dev
+
+
 # === STEP 1: Create virtual environment ===
 if [ ! -d "$VENV_DIR" ]; then
   echo "Creating virtual environment..."
