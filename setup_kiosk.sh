@@ -5,7 +5,7 @@ START_SCRIPT="/home/Admin/start_kiosk.sh"
 XINITRC="/home/Admin/.xinitrc"
 SERVICE_FILE="/etc/systemd/system/kiosk.service"
 
-# Check correct user
+# ✅ Ensure this script is run as the correct user
 if [ "$USER" != "Admin" ]; then
   echo "❌ Please run this as user: Admin"
   exit 1
@@ -14,20 +14,23 @@ fi
 echo "🔄 Updating system..."
 sudo apt update
 
-echo "📦 Installing minimal X11 and git packages..."
-sudo apt install -y xserver-xorg x11-xserver-utils xinit xterm git
+echo "📦 Installing X11, Python, and Kivy system-wide..."
+sudo apt install -y xserver-xorg x11-xserver-utils xinit xterm python3-pip
+sudo apt install -y python3-kivy
 
-echo "📝 Creating start script outside the repo..."
+echo "📝 Creating start script..."
 cat <<EOF > "$START_SCRIPT"
 #!/bin/bash
 export DISPLAY=:0
 export XAUTHORITY=/home/Admin/.Xauthority
-python3 "$APP_PATH"
+
+echo "🚀 Launching Kivy App..."
+python3 "$APP_PATH" 2>&1 | tee /home/Admin/kiosk_app.log
 EOF
 
 chmod +x "$START_SCRIPT"
 
-echo "📝 Creating .xinitrc in Admin's home directory..."
+echo "📝 Creating .xinitrc..."
 cat <<EOF > "$XINITRC"
 #!/bin/bash
 exec $START_SCRIPT
@@ -35,7 +38,7 @@ EOF
 
 chmod +x "$XINITRC"
 
-echo "🛠️ Creating kiosk.service..."
+echo "🛠️ Creating systemd kiosk.service..."
 sudo tee "$SERVICE_FILE" > /dev/null <<EOF
 [Unit]
 Description=Kiosk Mode
@@ -71,7 +74,7 @@ for tty in {2..6}; do
     sudo systemctl disable getty@tty$tty.service
 done
 
-echo "🧹 Optional: Clean up boot messages for silent boot (editing /boot/cmdline.txt)"
+echo "🧹 Optional: Clean boot message line in /boot/cmdline.txt"
 sudo sed -i 's/$/ quiet loglevel=0 console=tty3/' /boot/cmdline.txt
 
-echo "✅ Setup complete. Reboot to apply all settings."
+echo "✅ Kiosk setup complete. Reboot to start the Kivy app on boot."
