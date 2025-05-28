@@ -1,3 +1,13 @@
+import os
+os.environ["KIVY_METRICS_DENSITY"] = "1"
+os.environ["KIVY_BCM_DISPMANX_ID"] = "1"
+os.environ["KIVY_WINDOW"] = "sdl2"
+os.environ["KIVY_GL_BACKEND"] = "sdl2"
+os.environ["SDL_FBDEV"] = "/dev/fb1"
+os.environ["SDL_VIDEODRIVER"] = "fbcon"
+os.environ["KIVY_WINDOW_WIDTH"] = "480"
+os.environ["KIVY_WINDOW_HEIGHT"] = "320"
+
 from kivy.app import App
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.image import Image
