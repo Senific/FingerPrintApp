@@ -1,16 +1,16 @@
 #!/bin/bash
 
-APP_PATH="/home/Admin/FingerPrintApp/main.py"
-APP_DIR="/home/Admin/FingerPrintApp"
-VENV_DIR="/home/Admin/my_venv"
-START_SCRIPT="/home/Admin/start_app.sh"
-XINITRC="/home/Admin/.xinitrc"
-SERVICE_FILE="/etc/systemd/system/kiosk.service"
-USER="Admin"
+TARGET_USER="admin"
+APP_DIR="/home/$TARGET_USER/FingerPrintApp"
+APP_PATH="$APP_DIR/main.py"
+VENV_DIR="/home/$TARGET_USER/my_venv"
+START_SCRIPT="/home/$TARGET_USER/start_app.sh"
+XINITRC="/home/$TARGET_USER/.xinitrc"
+BASH_PROFILE="/home/$TARGET_USER/.bash_profile"
 
 # Check correct user
-if [ "$USER" != "$(whoami)" ]; then
-  echo "❌ Please run this script as user: $USER"
+if [ "$(whoami)" != "$TARGET_USER" ]; then
+  echo "❌ Please run this script as user: $TARGET_USER"
   exit 1
 fi
 
@@ -43,39 +43,36 @@ chmod +x "$START_SCRIPT"
 echo "📝 Creating .xinitrc to launch start_app.sh..."
 cat <<EOF > "$XINITRC"
 #!/bin/bash
+export DISPLAY=:0
 exec $START_SCRIPT
 EOF
 chmod +x "$XINITRC"
 
-echo "🛠️ Creating kiosk.service systemd unit..."
-sudo tee "$SERVICE_FILE" > /dev/null <<EOF
-[Unit]
-Description=Kiosk Mode for $USER
-After=network.target
+echo "🧠 Adding autostart of X in .bash_profile on tty1..."
+cat <<EOF >> "$BASH_PROFILE"
 
-[Service]
-User=$USER
-Environment=DISPLAY=:0
-ExecStart=/usr/bin/xinit
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
+# Auto-launch startx on tty1
+if [[ -z "\$DISPLAY" ]] && [[ \$(tty) == /dev/tty1 ]]; then
+  startx
+fi
 EOF
 
-echo "🔁 Reloading systemd daemon and enabling kiosk service..."
-sudo systemctl daemon-reexec
-sudo systemctl daemon-reload
-sudo systemctl enable kiosk.service
-sudo systemctl start kiosk.service
-
-echo "🔐 Setting up autologin on tty1 for $USER..."
+echo "🔐 Setting up autologin on tty1 for $TARGET_USER..."
 sudo mkdir -p /etc/systemd/system/getty@tty1.service.d
-
 sudo tee /etc/systemd/system/getty@tty1.service.d/autologin.conf > /dev/null <<EOF
 [Service]
 ExecStart=
-ExecStart=-/sbin/agetty --autologin $USER --noclear %I \$TERM
+ExecStart=-/sbin/agetty --autologin $TARGET_USER --noclear %I \$TERM
+EOF
+
+echo "🖥️ (Optional) Creating X11 config to use /dev/fb1 (ILI9486)..."
+sudo mkdir -p /etc/X11/xorg.conf.d
+sudo tee /etc/X11/xorg.conf.d/99-fbdev.conf > /dev/null <<EOF
+Section "Device"
+    Identifier  "FBDEV"
+    Driver      "fbdev"
+    Option      "fbdev" "/dev/fb1"
+EndSection
 EOF
 
 echo "🚫 Disabling getty login prompts on tty2-tty6..."
@@ -88,4 +85,4 @@ if ! grep -q "quiet loglevel=0 console=tty3" /boot/cmdline.txt; then
   sudo sed -i 's/$/ quiet loglevel=0 console=tty3/' /boot/cmdline.txt
 fi
 
-echo "✅ Setup complete! Please reboot the system to start kiosk mode."
+echo "✅ Setup complete! Reboot your Pi to test kiosk mode on LCD."
