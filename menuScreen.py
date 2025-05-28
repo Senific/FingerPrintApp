@@ -15,7 +15,7 @@ class MenuScreen(Screen):
         layout = BoxLayout(orientation='vertical', padding=20, spacing=20)
 
         background = Image(
-            source="assets/bg.jpg",
+            source="assets/bg2.jpg",
             allow_stretch=True,
             keep_ratio=False,
             size_hint=(1, 1),
