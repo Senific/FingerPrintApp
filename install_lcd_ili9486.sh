@@ -1,25 +1,24 @@
 #!/bin/bash
 set -e
 
-echo "📦 Installing dependencies..."
-sudo apt update
-sudo apt install -y raspberrypi-kernel-headers git build-essential dkms device-tree-compiler
+echo "Updating system..."
+sudo apt update && sudo apt full-upgrade -y
 
-echo "🖥️ Cloning LCD driver repo..."
-cd /home/Admin
-git clone https://github.com/goodtft/LCD-show.git
+echo "Enabling SPI interface..."
+sudo raspi-config nonint do_spi 0
+
+echo "Installing dependencies for LCD driver..."
+sudo apt install -y git bc raspberrypi-kernel-headers build-essential device-tree-compiler
+
+echo "Cloning LCD driver repo..."
+cd ~
+if [ ! -d "LCD-show" ]; then
+    git clone https://github.com/waveshare/LCD-show.git
+fi
+
+echo "Running LCD driver installation script..."
 cd LCD-show
+sudo ./LCD35-show  # Adjust this if your screen uses a different script
 
-echo "🛠️ Installing 3.5-inch ILI9486 driver..."
-# This script will:
-# - Copy kernel module
-# - Modify config.txt
-# - Enable SPI
-# - Set display rotation
-
-sudo chmod +x LCD35-show
-sudo ./LCD35-show
-
-# It will auto-reboot. If not, prompt user:
-echo "✅ Driver install script complete. If not rebooted automatically, please run:"
-echo "   sudo reboot"
+echo "Rebooting system to apply changes..."
+sudo reboot

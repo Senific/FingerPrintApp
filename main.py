@@ -1,10 +1,12 @@
-import os
-
-# Force Kivy to use the framebuffer display
-os.environ["KIVY_WINDOW"] = "sdl2"
-os.environ["KIVY_TEXT"] = "sdl2"
-os.environ["SDL_FBDEV"] = "/dev/fb1"
-os.environ["SDL_VIDEODRIVER"] = "fbcon"
+from kivy import Config
+Config.set('graphics', 'fullscreen', '1')
+Config.set('graphics', 'window_state', 'maximized')
+Config.set('graphics', 'borderless', '1')
+Config.set('graphics', 'resizable', '0')
+Config.set('graphics', 'show_cursor', '0')
+Config.set('kivy', 'log_level', 'info')
+Config.set('graphics', 'multisamples', '0')
+Config.set('graphics', 'backend', 'egl_rpi')
 
 
 from kivy.app import App
