@@ -7,6 +7,14 @@ from kivy.clock import Clock
 from datetime import datetime
 import os
 
+os.environ['KIVY_BCM_DISPMANX_ID'] = '2'  # For LCD on SPI (fb1)
+os.environ['KIVY_METRICS_DENSITY'] = '1'
+os.environ['KIVY_WINDOW'] = 'sdl2'
+os.environ['KIVY_GL_BACKEND'] = 'sdl2'
+os.environ['KIVY_NO_ARGS'] = '1'
+os.environ['KIVY_WINDOW_WIDTH'] = '480'
+os.environ['KIVY_WINDOW_HEIGHT'] = '320'
+
 class IdleScreen(FloatLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
