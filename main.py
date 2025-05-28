@@ -9,13 +9,10 @@ import os
 
 from testLayout import TestLayout
 
-#os.environ['KIVY_BCM_DISPMANX_ID'] = '2'  # For LCD on SPI (fb1)
-os.environ['KIVY_METRICS_DENSITY'] = '1'
+os.environ['KIVY_BCM_DISPMANX_DISPLAY'] = '1'  # Use framebuffer /dev/fb1
 os.environ['KIVY_WINDOW'] = 'sdl2'
-os.environ['KIVY_GL_BACKEND'] = 'sdl2'
-os.environ['KIVY_NO_ARGS'] = '1'
-os.environ['KIVY_WINDOW_WIDTH'] = '480'
-os.environ['KIVY_WINDOW_HEIGHT'] = '320'
+os.environ['SDL_FBDEV'] = '/dev/fb1'
+os.environ['KIVY_METRICS_DENSITY'] = '1'
 
 class IdleScreen(FloatLayout):
     def __init__(self, **kwargs):
