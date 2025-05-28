@@ -5,20 +5,7 @@ from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.clock import Clock
 from datetime import datetime
-import os
 
-from testLayout import TestLayout
-
-os.environ['KIVY_BCM_DISPMANX_DISPLAY'] = '1'  # Use framebuffer /dev/fb1
-os.environ['KIVY_WINDOW'] = 'sdl2'
-os.environ['SDL_FBDEV'] = '/dev/fb1'
-os.environ['KIVY_METRICS_DENSITY'] = '1'
-
-
-from kivy.config import Config
-Config.set('graphics', 'width', '480')
-Config.set('graphics', 'height', '320')
-Config.set('graphics', 'fullscreen', '1')
 
 class IdleScreen(FloatLayout):
     def __init__(self, **kwargs):
