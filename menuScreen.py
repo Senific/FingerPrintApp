@@ -35,7 +35,7 @@ class MenuScreen(Screen):
         self.add_widget(layout)
 
     def on_pre_enter(self):
-        self.status_label.text = ""
+        self.status_label.text = "Version 1.0"
 
 
     def on_set_finger(self, instance):
