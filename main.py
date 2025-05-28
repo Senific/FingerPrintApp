@@ -9,7 +9,7 @@ import os
 
 from testLayout import TestLayout
 
-os.environ['KIVY_BCM_DISPMANX_ID'] = '2'  # For LCD on SPI (fb1)
+#os.environ['KIVY_BCM_DISPMANX_ID'] = '2'  # For LCD on SPI (fb1)
 os.environ['KIVY_METRICS_DENSITY'] = '1'
 os.environ['KIVY_WINDOW'] = 'sdl2'
 os.environ['KIVY_GL_BACKEND'] = 'sdl2'
@@ -73,7 +73,7 @@ class IdleScreen(FloatLayout):
 
 class FingerprintApp(App):
     def build(self):
-        return TestLayout()
+        return IdleScreen()
 
 if __name__ == "__main__":
     FingerprintApp().run()
