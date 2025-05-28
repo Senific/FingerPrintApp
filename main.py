@@ -60,13 +60,13 @@ class IdleScreen(FloatLayout):
 
         company_label = Label(
             text="SENIFIC (PVT) LTD - WWW.SENIFIC.COM / 076-4092662",
-            font_size='18sp',
+            font_size='12sp',
             halign='center',
             valign='middle',
             color=(0.9, 0.9, 0.9, 1),
             size_hint=(1, None),
             height=24,
-            pos_hint={"center_x": 0.5, "y": .2}
+            pos_hint={"center_x": 0.5, "y": .05}
         )
         self.add_widget(company_label)
 
