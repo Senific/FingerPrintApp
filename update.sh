@@ -6,6 +6,11 @@ cd "$APP_DIR" || {
   exit 1
 }
 
+# === STEP 2: Activate and install Python dependencies ===
+echo "Activating virtual environment..."
+source "$HOME/my_venv/bin/activate"
+
+
 echo "🔄 Pulling latest code from Git..."
 git reset --hard
 git pull origin main
