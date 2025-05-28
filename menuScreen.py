@@ -1,7 +1,7 @@
 import os
 import threading
 from subprocess import run, CalledProcessError
-from tkinter import Image
+from kivy.uix.image import Image
 from kivy.uix.screenmanager import Screen
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
