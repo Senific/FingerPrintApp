@@ -1,30 +1,48 @@
 #!/bin/bash
+
 set -e
 
-echo "📦 Updating and installing packages..."
-sudo apt update && sudo apt upgrade -y
+# Update and install dependencies
+sudo apt-get update
+sudo apt-get install -y cmake git build-essential libboost-dev libudev-dev
 
-sudo apt install -y cmake git python3-pip python3-dev python3-venv \
-  libgl1-mesa-dev libgles2-mesa-dev libgstreamer1.0-dev \
-  gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
-  libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev \
-  libmtdev-dev libinput-dev libjpeg-dev libpng-dev libfreetype6-dev \
-  libffi-dev libssl-dev libportmidi-dev libavformat-dev \
-  libswscale-dev libavcodec-dev zlib1g-dev
-
-echo "🖥️ Cloning and building fbcp-ili9341 with ILI9486 support..."
+# Clone fbcp-ili9341
 cd ~
-git clone https://github.com/juj/fbcp-ili9341.git
-cd fbcp-ili9341
-mkdir -p build && cd build
-cmake -DILI9486=ON -DSPI_BUS_CLOCK_DIVISOR=6 -DDISPLAY_ROTATE_180_DEGREES=ON ..
-make -j
+if [ ! -d fbcp-ili9341 ]; then
+    git clone https://github.com/juj/fbcp-ili9341.git
+fi
 
-echo "🐍 Setting up Kivy virtual environment..."
-cd ~
-python3 -m venv kivy_venv
-source kivy_venv/bin/activate
-pip install --upgrade pip setuptools wheel
-pip install "kivy[base]"
+# Build it natively (no cross-compile flags)
+cd ~/fbcp-ili9341
+mkdir -p build
+cd build
+cmake -DWAVESHARE_ILI9341=ON ..
+make -j$(nproc)
 
-echo "✅ Environment setup complete."
+# Optional: Enable SPI and configure to run on boot
+if ! grep -q "^dtparam=spi=on" /boot/config.txt; then
+    echo "dtparam=spi=on" | sudo tee -a /boot/config.txt
+fi
+
+# Autostart fbcp-ili9341 on boot (optional)
+SERVICE_FILE="/etc/systemd/system/fbcp-ili9341.service"
+if [ ! -f "$SERVICE_FILE" ]; then
+    sudo tee "$SERVICE_FILE" > /dev/null <<EOF
+[Unit]
+Description=Framebuffer copy for ILI9341
+After=network.target
+
+[Service]
+ExecStart=/home/Admin/fbcp-ili9341/build/fbcp-ili9341
+Restart=always
+User=Admin
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    sudo systemctl enable fbcp-ili9341
+    sudo systemctl start fbcp-ili9341
+fi
+
+echo "fbcp-ili9341 installed and configured."
