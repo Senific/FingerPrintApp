@@ -1,13 +1,23 @@
-from kivy import Config
-Config.set('graphics', 'fullscreen', '1')
-Config.set('graphics', 'window_state', 'maximized')
-Config.set('graphics', 'borderless', '1')
-Config.set('graphics', 'resizable', '0')
-Config.set('graphics', 'show_cursor', '0')
-Config.set('kivy', 'log_level', 'info')
-Config.set('graphics', 'multisamples', '0')
-Config.set('graphics', 'backend', 'egl_rpi')
+# from kivy import Config
+# Config.set('graphics', 'fullscreen', '1')
+# Config.set('graphics', 'window_state', 'maximized')
+# Config.set('graphics', 'borderless', '1')
+# Config.set('graphics', 'resizable', '0')
+# Config.set('graphics', 'show_cursor', '0')
+# Config.set('kivy', 'log_level', 'info')
+# Config.set('graphics', 'multisamples', '0')
+# Config.set('graphics', 'backend', 'egl_rpi')
 
+
+import os
+os.environ["KIVY_BCM_DISPMANX_DISPLAY"] = "1"
+os.environ["KIVY_METRICS_DENSITY"] = "2"
+os.environ["KIVY_WINDOW"] = "sdl2"
+
+from kivy.config import Config
+Config.set('graphics', 'fullscreen', '1')
+Config.set('graphics', 'resizable', '0')
+Config.set('graphics', 'borderless', '1')
 
 from kivy.app import App
 from kivy.uix.floatlayout import FloatLayout
