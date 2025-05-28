@@ -1,3 +1,7 @@
+import logging
+logging.basicConfig(filename='/home/admin/app.log', level=logging.DEBUG)
+
+
 from kivy.core.window import Window
 
 from idleScreen import IdleScreen
