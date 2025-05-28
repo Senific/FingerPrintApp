@@ -34,7 +34,7 @@ class IdleScreen(FloatLayout):
 
         self.clock_label = Label(
             text="00:00:00",
-            font_size='48sp',
+            font_size='80sp',
             halign='center',
             valign='middle',
             color=(1, 1, 1, 1),
@@ -46,21 +46,21 @@ class IdleScreen(FloatLayout):
         self.add_widget(self.clock_label)
 
         self.resolution_label = Label(
-            text=f"Resolution: {Window.size[0]} x {Window.size[1]}",
-            font_size='20sp',
+            text= datetime.now().strftime("%d %b %Y"),
+            font_size='30sp',
             halign='center',
             valign='middle',
             color=(1, 1, 1, 1),
             size_hint=(None, None),
             size=(480, 40),
-            pos_hint={"center_x": 0.5, "center_y": 0.5}
+            pos_hint={"center_x": 0.5, "center_y": 0.4}
         )
         self.resolution_label.bind(size=self._update_clock_label)
         self.add_widget(self.resolution_label)
 
         company_label = Label(
             text="SENIFIC (PVT) LTD - WWW.SENIFIC.COM / 076-4092662",
-            font_size='12sp',
+            font_size='18sp',
             halign='center',
             valign='middle',
             color=(0.9, 0.9, 0.9, 1),
