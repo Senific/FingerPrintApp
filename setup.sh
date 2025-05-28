@@ -3,7 +3,7 @@ set -e
 
 # === CONFIG ===
 APP_DIR="FingerPrintApp"
-VENV_DIR="$HOME/kivy_venv"
+VENV_DIR="$HOME/my_venv"
 PYTHON_BIN="$VENV_DIR/bin/python3"
 PIP_BIN="$VENV_DIR/bin/pip"
 
@@ -48,7 +48,7 @@ $PIP_BIN install --upgrade pip setuptools wheel Cython
 
 # Use kivy[full] if you need audio/video support, or kivy[base] if not
 echo "Installing Kivy and dependencies..."
-$PIP_BIN install kivy[full]
+$PIP_BIN install kivy
 
 # === STEP 3: Run the app ===
 echo "Running the Kivy app..."
