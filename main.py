@@ -1,11 +1,15 @@
+from kivy.core.window import Window
+
+# Enable fullscreen mode automatically
+Window.fullscreen = True
+
 from kivy.app import App
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.image import Image
 from kivy.uix.label import Label
-from kivy.uix.button import Button
 from kivy.clock import Clock
-from datetime import datetime
-
+from datetime import datetime 
+ 
 
 class IdleScreen(FloatLayout):
     def __init__(self, **kwargs):
@@ -35,6 +39,20 @@ class IdleScreen(FloatLayout):
         self.clock_label.bind(size=self._update_clock_label)
         self.add_widget(self.clock_label)
 
+        # --- Screen resolution label below clock ---
+        self.resolution_label = Label(
+            text=f"Resolution: {Window.size[0]} x {Window.size[1]}",
+            font_size='20sp',
+            halign='center',
+            valign='middle',
+            color=(1, 1, 1, 1),
+            size_hint=(None, None),
+            size=(480, 40),
+            pos_hint={"center_x": 0.5, "center_y": 0.5}
+        )
+        self.resolution_label.bind(size=self._update_clock_label)
+        self.add_widget(self.resolution_label)
+
         # --- Footer: Company Name --- 
         company_label = Label(
             text="SENIFIC (PVT) LTD - WWW.SENIFIC.COM / 076-4092662",
@@ -46,20 +64,17 @@ class IdleScreen(FloatLayout):
             height=24,
             pos_hint={"center_x": 0.5, "y": .2 }  # Slightly above bottom
         )
-
         self.add_widget(company_label)
-
-        
+ 
         # Start the clock update
         Clock.schedule_interval(self.update_clock, 1)
 
     def update_clock(self, dt):
-        self.clock_label.text = datetime.now().strftime("%H:%M:%S") + "Kas"
+        self.clock_label.text = datetime.now().strftime("%H:%M:%S") 
 
     def _update_clock_label(self, instance, value):
         instance.text_size = instance.size
 
-  
 
 class FingerprintApp(App):
     def build(self):
