@@ -18,8 +18,8 @@ Window.fullscreen = False
 screen_width, screen_height = Window.system_size  # Kivy 2.1+ provides system_size
 
 # Calculate top-left coordinates to center window
-Window.left = (screen_width - win_width) // 2
-Window.top = (screen_height - win_height) // 2
+# Window.left = (screen_width - win_width) // 2
+# Window.top = (screen_height - win_height) // 2
 
 from kivy.uix.screenmanager import ScreenManager, FadeTransition
 from kivy.app import App
