@@ -10,7 +10,7 @@ from menuScreen import MenuScreen
 from wifiConnectScreen import WifiConnectScreen
 
 # Desired window size
-# win_width, win_height = 480, 320
+win_width, win_height = 480, 320
 # Window.size = (win_width, win_height)
 Window.fullscreen = True
 
