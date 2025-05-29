@@ -10,7 +10,7 @@ git clone https://github.com/Senific/FingerPrintApp.git
 cd FingerPrintApp
 
 chmod +x install_display.sh
-./install_lcd.sh
+./install_display.sh
 
 chmod +x setup.sh
 ./setup.sh
