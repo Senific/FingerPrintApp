@@ -69,8 +69,3 @@ class IdleScreen(Screen):
         instance.text_size = instance.size
 
     
-    def on_touch_down(self, touch):
-        # Switch to MenuScreen on any touch
-        if self.manager:
-            self.manager.current = 'menu'
-        return super().on_touch_down(touch)
