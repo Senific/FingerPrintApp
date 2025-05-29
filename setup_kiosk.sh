@@ -3,18 +3,18 @@ set -e
 
 # === CONFIGURATION ===
 USER="admin"
-APP_DIR="FingerPrintApp"
-VENV_DIR="$HOME/my_venv"
+HOME_DIR="/home/$USER"
+APP_DIR="$HOME_DIR/FingerPrintApp"
+VENV_DIR="$APP_DIR/my_venv"
 PYTHON="$VENV_DIR/bin/python"
 MAIN_SCRIPT="$APP_DIR/main.py"
-LOG_FILE="$HOME/fingerprintapp.log"
-SERVICE_NAME="fingerprintapp"
+LOG_FILE="$HOME_DIR/fingerprintapp.log"
+XINITRC="$HOME_DIR/.xinitrc"
 
 echo "----------------------------------------"
 echo "1. Enable ILI9486 Touchscreen Driver"
 echo "----------------------------------------"
 
-# Add LCD overlay to config.txt (if not already present)
 if ! grep -q "dtoverlay=ili9486" /boot/config.txt; then
     echo "Adding ILI9486 driver overlay..."
     echo "dtoverlay=ili9486,miso=off,rotate=270,speed=16000000,fps=30" | sudo tee -a /boot/config.txt
@@ -33,39 +33,42 @@ sudo apt-get install -y \
     libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev \
     libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev \
     zlib1g-dev libgstreamer1.0 libmtdev-dev \
-    xserver-xorg xinit x11-xserver-utils
+    xserver-xorg xinit x11-xserver-utils unclutter
 
 echo "----------------------------------------"
 echo "3. Create .xinitrc to Auto-launch Kivy App"
 echo "----------------------------------------"
 
-# Create .xinitrc script that will launch the Kivy app in a loop
-sudo -u $USER bash -c "cat > //$HOME/.xinitrc" << EOF
+sudo -u $USER bash -c "cat > $XINITRC" << 'EOF'
 #!/bin/bash
+
 # Disable screen blanking and power saving
 xset -dpms
 xset s off
 xset s noblank
 
-# Run app in a loop, logging output
+# Hide the mouse cursor
+unclutter -idle 0.1 -root &
+
+# Log and run Kivy app in a loop
 while true; do
-    echo "Starting Kivy app..." >> "$LOG_FILE"
-    date >> "$LOG_FILE"
-    cd "$APP_DIR"
-    source "$VENV_DIR/bin/activate"
-    $PYTHON "$MAIN_SCRIPT" >> "$LOG_FILE" 2>&1
-    echo "App crashed or exited. Restarting in 3 seconds..." >> "$LOG_FILE"
+    echo "Starting Kivy app..." >> "$HOME/fingerprintapp.log"
+    date >> "$HOME/fingerprintapp.log"
+    cd "$HOME/FingerPrintApp"
+    source "$HOME/FingerPrintApp/my_venv/bin/activate"
+    "$HOME/FingerPrintApp/my_venv/bin/python" "$HOME/FingerPrintApp/main.py" >> "$HOME/fingerprintapp.log" 2>&1
+    echo "App crashed or exited. Restarting in 3 seconds..." >> "$HOME/fingerprintapp.log"
     sleep 3
 done
 EOF
 
-chmod +x /$HOME/.xinitrc
+chmod +x "$XINITRC"
+chown $USER:$USER "$XINITRC"
 
 echo "----------------------------------------"
 echo "4. Set up Auto-login on TTY1"
 echo "----------------------------------------"
 
-# Auto-login user on tty1 so startx can run
 sudo mkdir -p /etc/systemd/system/getty@tty1.service.d
 
 sudo bash -c "cat > /etc/systemd/system/getty@tty1.service.d/override.conf" << EOF
@@ -78,12 +81,13 @@ echo "----------------------------------------"
 echo "5. Launch X on Login via .bash_profile"
 echo "----------------------------------------"
 
-# Ensure startx runs only on tty1 and not in SSH
-sudo -u $USER bash -c "cat > /$HOME/.bash_profile" << EOF
+sudo -u $USER bash -c "cat > $HOME_DIR/.bash_profile" << EOF
 if [[ -z \$DISPLAY ]] && [[ \$(tty) = /dev/tty1 ]]; then
     startx
 fi
 EOF
+
+chown $USER:$USER "$HOME_DIR/.bash_profile"
 
 echo "----------------------------------------"
 echo "6. Prepare Log File for App Output"
@@ -96,8 +100,6 @@ echo "----------------------------------------"
 echo "7. Enable All Configurations and Reboot"
 echo "----------------------------------------"
 
-echo "Setup complete. The system will now reboot."
-echo "On boot, it will auto-login, launch X, and start your Kivy app."
-
+echo "✅ Setup complete. Rebooting now to apply changes..."
 sleep 5
 sudo reboot
