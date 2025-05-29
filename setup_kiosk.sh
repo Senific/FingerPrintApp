@@ -1,30 +1,44 @@
 #!/bin/bash
 
-# Configuration
+set -e
+
 APP_DIR="/home/admin/FingerPrintApp"
-VENV_DIR="$APP_DIR/my_venv"
-PYTHON_EXEC="$VENV_DIR/bin/python"
-APP_ENTRY="main.py"
-SERVICE_NAME="fingerprintapp"
+VENV_DIR="/home/my_venv"
+PYTHON="$VENV_DIR/bin/python"
+SERVICE_FILE="/etc/systemd/system/fingerprintapp.service"
 
-# Ensure script is run as root
-if [[ $EUID -ne 0 ]]; then
-   echo "❌ This script must be run as root. Use: sudo ./setup_kiosk_app.sh"
-   exit 1
+echo "🔧 Step 1: Create or verify virtual environment..."
+if [ ! -f "$PYTHON" ]; then
+    python3 -m venv "$VENV_DIR"
+    echo "✅ Virtual environment created at $VENV_DIR"
 fi
 
-# Ensure ILI9486 LCD is configured
-echo "✅ Configuring ILI9486 LCD for console..."
-if ! grep -q "fbcon=map:1" /boot/cmdline.txt; then
-  sed -i 's/$/ fbcon=map:1 fbcon=font:VGA8x8/' /boot/cmdline.txt
+echo "📦 Step 2: Activate venv and install Kivy dependencies..."
+source "$VENV_DIR/bin/activate"
+pip install --upgrade pip
+pip install kivy
+
+echo "🖥️ Step 3: Configure environment for 3.5\" ILI9486 LCD..."
+
+# Set environment variables Kivy uses to point to the LCD (usually fb1)
+ENV_FILE="/home/admin/.kivy_env"
+cat <<EOF > "$ENV_FILE"
+export KIVY_BCM_DISPMANX_ID=2
+export KIVY_NO_ARGS=1
+export KIVY_METRICS_DENSITY=1
+export KIVY_GL_BACKEND=gl
+export FRAMEBUFFER=/dev/fb1
+export SDL_FBDEV=/dev/fb1
+EOF
+
+# Add to .bash_profile if not already
+if ! grep -q ".kivy_env" /home/admin/.bash_profile; then
+    echo "source ~/.kivy_env" >> /home/admin/.bash_profile
 fi
 
-# Enable SPI for ILI9486 (if not already)
-raspi-config nonint do_spi 0
+echo "🛠️ Step 4: Create systemd service..."
 
-# Create systemd service file
-echo "✅ Creating systemd service for FingerPrintApp..."
-cat <<EOF > /etc/systemd/system/${SERVICE_NAME}.service
+sudo tee "$SERVICE_FILE" > /dev/null <<EOF
 [Unit]
 Description=FingerPrintApp Kivy Kiosk Service
 After=network.target
@@ -32,25 +46,28 @@ After=network.target
 [Service]
 User=admin
 WorkingDirectory=$APP_DIR
-ExecStart=$PYTHON_EXEC $APP_DIR/$APP_ENTRY
+ExecStart=/home/my_venv/bin/python $APP_DIR/main.py
 Restart=always
 RestartSec=5
 Environment=PYTHONUNBUFFERED=1
 StandardOutput=journal
 StandardError=journal
+EnvironmentFile=$ENV_FILE
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
-# Permissions
-chmod 644 /etc/systemd/system/${SERVICE_NAME}.service
+echo "✅ Systemd service created."
 
-# Enable and start the service
-systemctl daemon-reexec
-systemctl daemon-reload
-systemctl enable ${SERVICE_NAME}.service
-systemctl start ${SERVICE_NAME}.service
+echo "🔁 Step 5: Reload systemd and enable the app..."
+sudo systemctl daemon-reload
+sudo systemctl enable fingerprintapp.service
+sudo systemctl restart fingerprintapp.service
 
-echo "✅ FingerPrintApp service installed and running."
-echo "🔁 The app will now run on boot, restart on crash, and block other GUI."
+echo "🧹 Step 6: Disable desktop boot (if enabled)..."
+sudo systemctl set-default multi-user.target
+
+echo "✅ All done! App will now launch full-screen on boot using the LCD."
+
+systemctl status fingerprintapp.service
