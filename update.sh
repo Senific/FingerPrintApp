@@ -1,6 +1,6 @@
 #!/bin/bash
 
-APP_DIR="/home/Admin/FingerPrintApp"
+APP_DIR="/home/admin/FingerPrintApp"
 cd "$APP_DIR" || {
   echo "❌ Cannot find application directory: $APP_DIR"
   exit 1
