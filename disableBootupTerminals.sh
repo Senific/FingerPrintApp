@@ -1,101 +1,85 @@
 #!/bin/bash
 set -e
 
-# --- Configuration ---
 USER="admin"
 HOME_DIR="/home/$USER"
 APP_DIR="$HOME_DIR/FingerPrintApp"
 VENV_DIR="$HOME_DIR/my_venv"
-LAUNCH_SCRIPT="$HOME_DIR/start-kivy.sh"
-SERVICE_FILE="/etc/systemd/system/kivyapp.service"
+PYTHON="$VENV_DIR/bin/python"
+MAIN_SCRIPT="$APP_DIR/main.py"
 LOG_FILE="$HOME_DIR/fingerprintapp.log"
+XINITRC="$HOME_DIR/.xinitrc"
 
 echo "----------------------------------------"
-echo "1. Disabling all TTYs..."
+echo "1. Disable Getty on TTY1"
 echo "----------------------------------------"
-for i in {1..6}; do
-  sudo systemctl mask getty@tty$i.service
-done
+sudo systemctl disable getty@tty1.service || true
 
 echo "----------------------------------------"
-echo "2. Hiding Boot Logs and Rainbow Splash..."
+echo "2. Create .xinitrc to Launch Kivy App"
 echo "----------------------------------------"
-
-# Hide boot messages, enable quiet splash
-sudo sed -i 's/console=tty1/console=tty3/' /boot/cmdline.txt
-sudo sed -i 's/$/ quiet splash loglevel=0 vt.global_cursor_default=0/' /boot/cmdline.txt
-
-# Disable rainbow splash
-if ! grep -q "disable_splash=1" /boot/config.txt; then
-  echo "disable_splash=1" | sudo tee -a /boot/config.txt
-fi
-
-# Disable blinking cursor
-sudo bash -c 'echo "setterm -cursor off" >> /etc/rc.local'
-
-echo "----------------------------------------"
-echo "3. Creating launch script for Kivy app..."
-echo "----------------------------------------"
-sudo -u $USER bash << EOF
-cat > "$LAUNCH_SCRIPT" << 'EOAPP'
+sudo -u "$USER" bash << 'EOF'
+cat > "$HOME/.xinitrc" << EOX
 #!/bin/bash
-export DISPLAY=:0
-export XAUTHORITY=/home/$USER/.Xauthority
-
-# Start X if not running
-if ! pgrep Xorg; then
-  startx &
-  sleep 5
-fi
-
 xset -dpms
 xset s off
 xset s noblank
-
 while true; do
-    echo "Starting Kivy app..." >> "$LOG_FILE"
-    date >> "$LOG_FILE"
-    cd "$APP_DIR" || exit 1
-    source "$VENV_DIR/bin/activate"
-    "$VENV_DIR/bin/python" main.py >> "$LOG_FILE" 2>&1
-    echo "App crashed or exited. Restarting in 3 seconds..." >> "$LOG_FILE"
-    sleep 3
+  echo "Starting Kivy app..." >> "$HOME/fingerprintapp.log"
+  date >> "$HOME/fingerprintapp.log"
+  cd "$HOME/FingerPrintApp"
+  source "$HOME/my_venv/bin/activate"
+  "$HOME/my_venv/bin/python" main.py >> "$HOME/fingerprintapp.log" 2>&1
+  echo "App crashed or exited. Restarting in 3 seconds..." >> "$HOME/fingerprintapp.log"
+  sleep 3
 done
-EOAPP
+EOX
 
-chmod +x "$LAUNCH_SCRIPT"
+chmod +x "$HOME/.xinitrc"
 EOF
 
 echo "----------------------------------------"
-echo "4. Creating systemd service..."
+echo "3. Create Systemd Service to Run X on Boot"
 echo "----------------------------------------"
-sudo bash -c "cat > $SERVICE_FILE" << EOSERVICE
+SERVICE_FILE="/etc/systemd/system/kivy-app.service"
+sudo bash -c "cat > $SERVICE_FILE" << EOF
 [Unit]
-Description=Kivy App Auto Boot
-After=multi-user.target graphical.target
+Description=Start Kivy App with X
+After=multi-user.target
 
 [Service]
 User=$USER
-WorkingDirectory=$HOME_DIR
-ExecStart=$LAUNCH_SCRIPT
-Restart=always
 Environment=DISPLAY=:0
-StandardOutput=journal
-StandardError=journal
+Environment=XAUTHORITY=$HOME_DIR/.Xauthority
+ExecStart=/usr/bin/startx
+Restart=always
+RestartSec=5
 
 [Install]
-WantedBy=graphical.target
-EOSERVICE
+WantedBy=multi-user.target
+EOF
 
-echo "----------------------------------------"
-echo "5. Enabling and starting the service..."
-echo "----------------------------------------"
 sudo systemctl daemon-reexec
 sudo systemctl daemon-reload
-sudo systemctl enable kivyapp.service
+sudo systemctl enable kivy-app.service
 
 echo "----------------------------------------"
-echo "✅ Setup complete. Rebooting into your app..."
+echo "4. Clean Up Getty & Set Permissions"
 echo "----------------------------------------"
-sleep 3
+sudo systemctl disable getty@tty1.service || true
+sudo chown "$USER:$USER" "$XINITRC"
+sudo chown "$USER:$USER" "$LOG_FILE"
+
+echo "----------------------------------------"
+echo "5. Show All Created Files"
+echo "----------------------------------------"
+echo "Created files:"
+echo "$XINITRC"
+echo "$SERVICE_FILE"
+echo "$LOG_FILE"
+
+echo "----------------------------------------"
+echo "✅ Setup complete. Rebooting now to boot into your app..."
+echo "----------------------------------------"
+sleep 5
 sudo reboot
