@@ -15,6 +15,7 @@ echo "----------------------------------------"
 echo "1. Enable ILI9486 Touchscreen Driver"
 echo "----------------------------------------"
 
+# Add LCD overlay to config.txt (if not already present)
 if ! grep -q "dtoverlay=ili9486" /boot/config.txt; then
     echo "Adding ILI9486 driver overlay..."
     echo "dtoverlay=ili9486,miso=off,rotate=270,speed=16000000,fps=30" | sudo tee -a /boot/config.txt
@@ -39,6 +40,7 @@ echo "----------------------------------------"
 echo "3. Create .xinitrc to Auto-launch Kivy App"
 echo "----------------------------------------"
 
+# Create .xinitrc in user's home directory
 sudo -u $USER bash -c "cat > $XINITRC" << 'EOF'
 #!/bin/bash
 
@@ -97,7 +99,17 @@ touch "$LOG_FILE"
 chown $USER:$USER "$LOG_FILE"
 
 echo "----------------------------------------"
-echo "7. Enable All Configurations and Reboot"
+echo "7. Check If main.py Exists"
+echo "----------------------------------------"
+
+if [ ! -f "$MAIN_SCRIPT" ]; then
+    echo "⚠️ ERROR: $MAIN_SCRIPT not found!"
+    echo "Please make sure your Kivy app main.py exists before rebooting."
+    exit 1
+fi
+
+echo "----------------------------------------"
+echo "8. Enable All Configurations and Reboot"
 echo "----------------------------------------"
 
 echo "✅ Setup complete. Rebooting now to apply changes..."
