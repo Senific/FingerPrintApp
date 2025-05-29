@@ -3,11 +3,11 @@ set -e
 
 # === CONFIGURATION ===
 USER="admin"
-APP_DIR="/home/$USER/FingerPrintApp"
-VENV_DIR="$APP_DIR/my_venv"
+APP_DIR="FingerPrintApp"
+VENV_DIR="$HOME/my_venv"
 PYTHON="$VENV_DIR/bin/python"
 MAIN_SCRIPT="$APP_DIR/main.py"
-LOG_FILE="/home/$USER/fingerprintapp.log"
+LOG_FILE="$HOME/fingerprintapp.log"
 SERVICE_NAME="fingerprintapp"
 
 echo "----------------------------------------"
@@ -40,7 +40,7 @@ echo "3. Create .xinitrc to Auto-launch Kivy App"
 echo "----------------------------------------"
 
 # Create .xinitrc script that will launch the Kivy app in a loop
-sudo -u $USER bash -c "cat > /home/$USER/.xinitrc" << EOF
+sudo -u $USER bash -c "cat > //$HOME/.xinitrc" << EOF
 #!/bin/bash
 # Disable screen blanking and power saving
 xset -dpms
@@ -59,7 +59,7 @@ while true; do
 done
 EOF
 
-chmod +x /home/$USER/.xinitrc
+chmod +x /$HOME/.xinitrc
 
 echo "----------------------------------------"
 echo "4. Set up Auto-login on TTY1"
@@ -79,7 +79,7 @@ echo "5. Launch X on Login via .bash_profile"
 echo "----------------------------------------"
 
 # Ensure startx runs only on tty1 and not in SSH
-sudo -u $USER bash -c "cat > /home/$USER/.bash_profile" << EOF
+sudo -u $USER bash -c "cat > /$HOME/.bash_profile" << EOF
 if [[ -z \$DISPLAY ]] && [[ \$(tty) = /dev/tty1 ]]; then
     startx
 fi
