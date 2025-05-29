@@ -5,7 +5,7 @@ set -e
 USER="admin"
 HOME_DIR="/home/$USER"
 APP_DIR="$HOME_DIR/FingerPrintApp"
-VENV_DIR="$APP_DIR/my_venv"
+VENV_DIR="$HOME_DIR/my_venv"
 PYTHON="$VENV_DIR/bin/python"
 MAIN_SCRIPT="$APP_DIR/main.py"
 LOG_FILE="$HOME_DIR/fingerprintapp.log"
@@ -34,14 +34,15 @@ sudo apt-get install -y \
     libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev \
     libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev \
     zlib1g-dev libgstreamer1.0 libmtdev-dev \
-    xserver-xorg xinit x11-xserver-utils unclutter
+    xserver-xorg xinit x11-xserver-utils
 
 echo "----------------------------------------"
 echo "3. Create .xinitrc to Auto-launch Kivy App"
 echo "----------------------------------------"
 
-# Create .xinitrc in user's home directory
-sudo -u $USER bash -c "cat > $XINITRC" << 'EOF'
+# Run as user so $HOME resolves to /home/admin
+sudo -u $USER bash << 'EOF'
+cat > "$HOME/.xinitrc" << EOINNER
 #!/bin/bash
 
 # Disable screen blanking and power saving
@@ -49,23 +50,20 @@ xset -dpms
 xset s off
 xset s noblank
 
-# Hide the mouse cursor
-unclutter -idle 0.1 -root &
-
 # Log and run Kivy app in a loop
 while true; do
     echo "Starting Kivy app..." >> "$HOME/fingerprintapp.log"
     date >> "$HOME/fingerprintapp.log"
     cd "$HOME/FingerPrintApp"
-    source "$HOME/FingerPrintApp/my_venv/bin/activate"
-    "$HOME/FingerPrintApp/my_venv/bin/python" "$HOME/FingerPrintApp/main.py" >> "$HOME/fingerprintapp.log" 2>&1
+    source "$HOME/my_venv/bin/activate"
+    "$HOME/my_venv/bin/python" main.py >> "$HOME/fingerprintapp.log" 2>&1
     echo "App crashed or exited. Restarting in 3 seconds..." >> "$HOME/fingerprintapp.log"
     sleep 3
 done
-EOF
+EOINNER
 
-chmod +x "$XINITRC"
-chown $USER:$USER "$XINITRC"
+chmod +x "$HOME/.xinitrc"
+EOF
 
 echo "----------------------------------------"
 echo "4. Set up Auto-login on TTY1"
@@ -83,13 +81,15 @@ echo "----------------------------------------"
 echo "5. Launch X on Login via .bash_profile"
 echo "----------------------------------------"
 
-sudo -u $USER bash -c "cat > $HOME_DIR/.bash_profile" << EOF
+sudo -u $USER bash << 'EOF'
+cat > "$HOME/.bash_profile" << EOPROFILE
 if [[ -z \$DISPLAY ]] && [[ \$(tty) = /dev/tty1 ]]; then
     startx
 fi
-EOF
+EOPROFILE
 
-chown $USER:$USER "$HOME_DIR/.bash_profile"
+chown "$USER:$USER" "$HOME/.bash_profile"
+EOF
 
 echo "----------------------------------------"
 echo "6. Prepare Log File for App Output"
@@ -99,17 +99,7 @@ touch "$LOG_FILE"
 chown $USER:$USER "$LOG_FILE"
 
 echo "----------------------------------------"
-echo "7. Check If main.py Exists"
-echo "----------------------------------------"
-
-if [ ! -f "$MAIN_SCRIPT" ]; then
-    echo "⚠️ ERROR: $MAIN_SCRIPT not found!"
-    echo "Please make sure your Kivy app main.py exists before rebooting."
-    exit 1
-fi
-
-echo "----------------------------------------"
-echo "8. Enable All Configurations and Reboot"
+echo "7. Enable All Configurations and Reboot"
 echo "----------------------------------------"
 
 echo "✅ Setup complete. Rebooting now to apply changes..."
