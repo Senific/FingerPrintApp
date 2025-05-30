@@ -1,107 +1,50 @@
 #!/bin/bash
-set -e
 
-# === CONFIGURATION ===
-USER="admin"
-HOME_DIR="/home/$USER"
-APP_DIR="$HOME_DIR/FingerPrintApp"
-VENV_DIR="$HOME_DIR/my_venv"
-PYTHON="$VENV_DIR/bin/python"
-MAIN_SCRIPT="$APP_DIR/main.py"
-LOG_FILE="$HOME_DIR/fingerprintapp.log"
-XINITRC="$HOME_DIR/.xinitrc"
-
-echo "----------------------------------------"
-echo "1. Enable ILI9486 Touchscreen Driver"
-echo "----------------------------------------"
-
-# Add LCD overlay to config.txt (if not already present)
-if ! grep -q "dtoverlay=ili9486" /boot/config.txt; then
-    echo "Adding ILI9486 driver overlay..."
-    echo "dtoverlay=ili9486,miso=off,rotate=270,speed=16000000,fps=30" | sudo tee -a /boot/config.txt
-    echo "framebuffer_width=480" | sudo tee -a /boot/config.txt
-    echo "framebuffer_height=320" | sudo tee -a /boot/config.txt
-fi
-
-echo "----------------------------------------"
-echo "2. Install Minimal X11 & Kivy Dependencies"
-echo "----------------------------------------"
-
-sudo apt-get update
-sudo apt-get install -y \
-    python3-dev python3-pip python3-virtualenv \
-    libgl1-mesa-dev libgles2-mesa-dev \
-    libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev \
-    libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev \
-    zlib1g-dev libgstreamer1.0 libmtdev-dev \
-    xserver-xorg xinit x11-xserver-utils
-
-echo "----------------------------------------"
-echo "3. Create .xinitrc to Auto-launch Kivy App"
-echo "----------------------------------------"
-
-# Run as user so $HOME resolves to /home/admin
-sudo -u $USER bash << 'EOF'
-cat > "$HOME/.xinitrc" << EOINNER
-#!/bin/bash
-
-# Disable screen blanking and power saving
-xset -dpms
-xset s off
-xset s noblank
-
-# Log and run Kivy app in a loop
-while true; do
-    echo "Starting Kivy app..." >> "$HOME/fingerprintapp.log"
-    date >> "$HOME/fingerprintapp.log"
-    cd "$HOME/FingerPrintApp"
-    source "$HOME/my_venv/bin/activate"
-    "$HOME/my_venv/bin/python" main.py >> "$HOME/fingerprintapp.log" 2>&1
-    echo "App crashed or exited. Restarting in 3 seconds..." >> "$HOME/fingerprintapp.log"
-    sleep 3
-done
-EOINNER
-
-chmod +x "$HOME/.xinitrc"
-EOF
-
-echo "----------------------------------------"
-echo "4. Set up Auto-login on TTY1"
-echo "----------------------------------------"
-
+echo "🔧 Step 1: Enable auto login for user 'admin'..."
 sudo mkdir -p /etc/systemd/system/getty@tty1.service.d
-
-sudo bash -c "cat > /etc/systemd/system/getty@tty1.service.d/override.conf" << EOF
+cat <<EOF | sudo tee /etc/systemd/system/getty@tty1.service.d/override.conf
 [Service]
 ExecStart=
-ExecStart=-/sbin/agetty --autologin $USER --noclear %I \$TERM
+ExecStart=-/sbin/agetty --autologin admin --noclear %I \$TERM
 EOF
 
-echo "----------------------------------------"
-echo "5. Launch X on Login via .bash_profile"
-echo "----------------------------------------"
+echo "🔧 Step 2: Create systemd service to launch your app..."
+SERVICE_PATH="/etc/systemd/system/fingerprint-kiosk.service"
 
-sudo -u $USER bash << 'EOF'
-cat > "$HOME/.bash_profile" << EOPROFILE
-if [[ -z \$DISPLAY ]] && [[ \$(tty) = /dev/tty1 ]]; then
-    startx
-fi
-EOPROFILE
+sudo tee "$SERVICE_PATH" > /dev/null <<EOF
+[Unit]
+Description=Start FingerPrintApp in kiosk mode
+After=network.target graphical.target
 
-chown "$USER:$USER" "$HOME/.bash_profile"
+[Service]
+Type=simple
+User=admin
+WorkingDirectory=/home/admin/FingerPrintApp
+ExecStart=/home/admin/my_venv/bin/python main.py
+Restart=always
+RestartSec=2
+StandardOutput=journal
+StandardError=journal
+Environment=KIVY_METRICS_FPS=1
+Environment=DISPLAY=:0
+
+[Install]
+WantedBy=multi-user.target
 EOF
 
-echo "----------------------------------------"
-echo "6. Prepare Log File for App Output"
-echo "----------------------------------------"
+sudo systemctl daemon-reexec
+sudo systemctl daemon-reload
+sudo systemctl enable fingerprint-kiosk.service
 
-touch "$LOG_FILE"
-chown $USER:$USER "$LOG_FILE"
+echo "🔧 Step 3: Disable boot logs and shell prompts..."
 
-echo "----------------------------------------"
-echo "7. Enable All Configurations and Reboot"
-echo "----------------------------------------"
+# Disable kernel boot messages
+sudo sed -i 's/$/ quiet loglevel=0 logo.nologo vt.global_cursor_default=0/' /boot/cmdline.txt
 
-echo "✅ Setup complete. Rebooting now to apply changes..."
-sleep 5
-sudo reboot
+# Mask getty to hide login prompts
+sudo systemctl mask getty@tty1.service
+
+# Disable Ctrl+Alt+F key switching
+sudo bash -c 'echo "keyboard-setup keyboard-setup/layoutcode string us\nkeyboard-setup keyboard-setup/modelcode string pc105\nkeyboard-setup keyboard-setup/variantcode string" | debconf-set-selections'
+
+echo "✅ Setup Complete. Please reboot to test the kiosk mode."
