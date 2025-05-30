@@ -1,43 +1,62 @@
 #!/bin/bash
+
 set -e
 
-APP_USER="admin"
-APP_DIR="/home/$APP_USER/FingerPrintApp"
-PYTHON_BIN="/usr/bin/python3"
-SERVICE_FILE="/etc/systemd/system/fingerprint-kiosk.service"
+USERNAME="admin"
+APP_DIR="/home/$USERNAME/FingerPrintApp"
+VENV_DIR="/home/$USERNAME/my_venv"
+SERVICE_NAME="fingerprint-kiosk"
 
-echo "📦 Installing 3.5\" LCD driver (GoodTFT)..."
-if [ ! -d "LCD-show" ]; then
-  git clone https://github.com/goodtft/LCD-show.git
-fi
-cd LCD-show
-sudo chmod +x LCD35-show
-sudo ./LCD35-show
+echo "🔧 Disabling boot messages and splash..."
 
-echo "📁 Setting up systemd service for Kivy App..."
+# Update /boot/config.txt
+CONFIG="/boot/config.txt"
+grep -qxF "disable_splash=1" $CONFIG || echo "disable_splash=1" >> $CONFIG
+grep -qxF "framebuffer_width=480" $CONFIG || echo "framebuffer_width=480" >> $CONFIG
+grep -qxF "framebuffer_height=320" $CONFIG || echo "framebuffer_height=320" >> $CONFIG
 
-cat <<EOF | sudo tee "$SERVICE_FILE" > /dev/null
+# Update /boot/cmdline.txt
+CMDLINE="/boot/cmdline.txt"
+CMDLINE_TEXT="console=tty3 loglevel=0 quiet splash plymouth.enable=0 fbcon=map:10 fbcon=font:VGA8x8"
+echo $CMDLINE_TEXT | sudo tee $CMDLINE > /dev/null
+
+echo "✅ Boot messages suppressed."
+
+echo "🔒 Enabling autologin to console..."
+sudo raspi-config nonint do_boot_behaviour B2
+
+echo "✅ Console autologin set."
+
+echo "🛠️ Creating systemd service for Kivy app..."
+
+SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
+cat <<EOF | sudo tee $SERVICE_FILE > /dev/null
 [Unit]
-Description=Kivy Fingerprint App on 3.5in LCD
+Description=FingerprintApp Kiosk
 After=multi-user.target
 
 [Service]
-User=$APP_USER
+Type=simple
+User=$USERNAME
 WorkingDirectory=$APP_DIR
-ExecStart=/bin/bash -c 'export SDL_FBDEV=/dev/fb1; export KIVY_WINDOW=egl_rpi; $PYTHON_BIN main.py'
+ExecStart=$VENV_DIR/bin/python main.py
+Environment=KIVY_BCM_DISPMANX_ID=2
+Environment=DISPLAY=:0
+StandardOutput=journal
+StandardError=journal
 Restart=on-failure
-RestartSec=3
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
-echo "🔄 Reloading systemd..."
+echo "🔁 Enabling and starting the service..."
+sudo systemctl daemon-reexec
 sudo systemctl daemon-reload
+sudo systemctl enable $SERVICE_NAME.service
 
-echo "✅ Enabling fingerprint kiosk service..."
-sudo systemctl enable fingerprint-kiosk.service
+echo "✅ Kiosk service installed. Your app will launch on boot."
 
-echo "📌 Done. Your Kivy app will launch automatically on the 3.5\" LCD after reboot."
-echo "🌀 Rebooting now..."
+echo "🚀 All done! Rebooting in 5 seconds..."
+sleep 5
 sudo reboot
