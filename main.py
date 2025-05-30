@@ -1,21 +1,25 @@
 # import logging
 # logging.basicConfig(filename='app.log', level=logging.DEBUG)
 
-
+from kivy.config import Config
+Config.set('graphics', 'fullscreen', '1')  # or 'auto'
+Config.set('graphics', 'show_cursor', '0')
+Config.set('graphics', 'resizable', '0')
+Config.set('graphics', 'width', '320')    # Adjust to your 3.5" screen size
+Config.set('graphics', 'height', '480')
 
 from kivy.core.window import Window
-
 from idleScreen import IdleScreen
 from menuScreen import MenuScreen
 from wifiConnectScreen import WifiConnectScreen
 
 # Desired window size
-win_width, win_height = 480, 320
-Window.size = (win_width, win_height)
-Window.fullscreen = False
+# win_width, win_height = 480, 320
+# Window.size = (win_width, win_height)
+# Window.fullscreen = False
 
 # Get the screen width and height (physical monitor resolution)
-screen_width, screen_height = Window.system_size  # Kivy 2.1+ provides system_size
+#screen_width, screen_height = Window.system_size  # Kivy 2.1+ provides system_size
 
 # Calculate top-left coordinates to center window
 # Window.left = (screen_width - win_width) // 2
