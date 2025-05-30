@@ -9,7 +9,8 @@ os.environ["KIVY_CLOCK"] = "default"
 os.environ["KIVY_VIDEO"] = "ffpyplayer"
 os.environ["KIVY_TEXT"] = "pil"
 os.environ["SDL_FBDEV"] = "/dev/fb1"
-#os.environ["KIVY_WINDOW"] = "sdl"
+os.environ["KIVY_WINDOW"] = "sdl"
+os.environ["SDL_FBDEV"] = "/dev/fb1" 
 
 
 
