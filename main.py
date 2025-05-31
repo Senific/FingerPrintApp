@@ -1,5 +1,7 @@
-# from kivy.config import Config
-# Config.set('modules', 'cursor', '')
+from kivy.config import Config
+Config.set('input', 'mouse', 'mouse,multitouch_on_demand')  # disables multitouch simulation from mouse
+Config.set('graphics', 'show_cursor', '0')  # hides the system cursor
+Config.set('modules', 'touchring', '')  # disables the black cross
 
 from kivy.core.window import Window
 from idleScreen import IdleScreen
