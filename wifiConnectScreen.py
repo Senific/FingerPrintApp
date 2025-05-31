@@ -1,41 +1,37 @@
-
-import os 
-
+import os
+import logging
+from subprocess import run, CalledProcessError
 from kivy.uix.screenmanager import Screen
 from kivy.uix.button import Button
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
-from subprocess import run, CalledProcessError
-import logging;
+
 
 class WifiConnectScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         layout = FloatLayout()
 
-        # SSID Input
         self.ssid_input = TextInput(
             hint_text="Wi-Fi SSID",
             multiline=False,
             size_hint=(0.8, 0.1),
             pos_hint={"center_x": 0.5, "center_y": 0.7},
-            text= 'Kasun\'iphone'
+            text="Kasun'iphone"
         )
         layout.add_widget(self.ssid_input)
 
-        # Password Input
         self.pass_input = TextInput(
             hint_text="Password",
             multiline=False,
             password=True,
             size_hint=(0.8, 0.1),
             pos_hint={"center_x": 0.5, "center_y": 0.55},
-            text= 'K255#1345'
+            text='K255#1345'
         )
         layout.add_widget(self.pass_input)
 
-        # Status Label
         self.status_label = Label(
             text="",
             size_hint=(0.8, 0.1),
@@ -47,7 +43,6 @@ class WifiConnectScreen(Screen):
         self.status_label.bind(size=self._update_text_size)
         layout.add_widget(self.status_label)
 
-        # Connect Button
         connect_btn = Button(
             text="Connect Wi-Fi",
             size_hint=(0.5, 0.15),
@@ -56,11 +51,10 @@ class WifiConnectScreen(Screen):
         connect_btn.bind(on_press=self.connect_wifi)
         layout.add_widget(connect_btn)
 
-        # Back Button - just below the Connect Button
         back_btn = Button(
             text="Back",
             size_hint=(0.5, 0.1),
-            pos_hint={"center_x": 0.5, "center_y": 0.12}  # slightly below connect button
+            pos_hint={"center_x": 0.5, "center_y": 0.12}
         )
         back_btn.bind(on_press=self.go_back)
         layout.add_widget(back_btn)
@@ -83,25 +77,23 @@ class WifiConnectScreen(Screen):
             logging.info(self.status_label.text)
             self.update_wifi_config(ssid, password)
 
-            self.status_label.text = "Restarting Wi-Fi service..."
+            self.status_label.text = "Restarting Wi-Fi (nmcli)..."
             logging.info(self.status_label.text)
 
-            run(["sudo", "killall", "wpa_supplicant"], check=False)
-            run(["sudo", "systemctl", "restart", "dhcpcd"], check=True)
-            run(["sudo", "wpa_cli", "-i", "wlan0", "reconfigure"], check=True)
+            # Connect using NetworkManager (nmcli)
+            run(["sudo", "nmcli", "device", "wifi", "connect", ssid, "password", password], check=True)
 
-            self.status_label.text = "Reconnecting to Wi-Fi..."
-            logging.info("Wi-Fi reconfigure triggered.")
+            self.status_label.text = f"✅ Connected to {ssid}"
+            logging.info(f"Wi-Fi connected to {ssid}")
 
         except CalledProcessError as e:
-            self.status_label.text = f"Failed to restart Wi-Fi: {e}"
+            self.status_label.text = f"❌ Failed to connect: {e}"
             logging.error(f"Wi-Fi reconnect error: {e}")
         except Exception as e:
             self.status_label.text = f"Error: {e}"
             logging.error("Wifi Connect Exception:")
             logging.exception(e)
 
-     
     def update_wifi_config(self, ssid, password):
         config_path = "/etc/wpa_supplicant/wpa_supplicant.conf"
         backup_path = "/etc/wpa_supplicant/wpa_supplicant.conf.bak"
@@ -146,8 +138,6 @@ class WifiConnectScreen(Screen):
             logging.exception(e)
             raise
 
-              
- 
     def go_back(self, instance):
         if self.manager:
             self.manager.current = "menu"
