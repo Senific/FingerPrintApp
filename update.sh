@@ -22,9 +22,4 @@ pip install --upgrade pip
 pip install -r "$APP_DIR/requirements.txt"
 deactivate
 
-echo "🔁 Restarting app..."
-pkill -f startx || true
-sleep 2
-sudo -u admin bash -c 'DISPLAY=:0 startx &' > /dev/null 2>&1
-
-echo "✅ Update + restart complete!"
+sudo reboot
