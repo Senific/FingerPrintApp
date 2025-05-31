@@ -14,3 +14,6 @@ chmod +x setup.sh
 
 chmod +x setup_kiosk.sh
 ./setup_kiosk.sh
+
+chmod +x enable_autologin.sh
+./enable_autologin.sh
