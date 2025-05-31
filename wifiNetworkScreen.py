@@ -50,6 +50,15 @@ class WifiNetworkScreen(Screen):
 
     def scan_networks(self):
         try:
+            active_ssid = None
+            if not sys.platform.startswith('win'):
+                connected = subprocess.check_output("nmcli -t -f active,ssid dev wifi", shell=True).decode()
+                for line in connected.splitlines():
+                    if line.startswith("yes:"):
+                        active_ssid = line.split(":", 1)[1]
+                        break
+            self.current_ssid = active_ssid
+
             if sys.platform.startswith('win'):
                 dummy_networks = [
                     ("TestWiFi_1", "78"),
