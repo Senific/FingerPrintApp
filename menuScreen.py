@@ -53,7 +53,7 @@ class MenuScreen(Screen):
         # Additional logic here...
 
     def on_wifi(self, instance): 
-        self.manager.current = 'wifi'
+        self.manager.current = 'wifi-manager'
 
     def on_update(self, instance):
         self.btn_update.disabled = True
