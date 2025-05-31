@@ -1,35 +1,33 @@
 #!/bin/bash
 
+set -e
+
 APP_DIR="/home/admin/FingerPrintApp"
-cd "$APP_DIR" || {
-  echo "❌ Cannot find application directory: $APP_DIR"
-  exit 1
-}
+VENV_PATH="/home/admin/senific_env"
+BRANCH="main"
 
+echo "🔧 Updating FingerPrintApp..."
 
-echo "🔄 Pulling latest code from Git..."
+# Navigate to project folder
+cd "$APP_DIR"
+
+# Reset and pull latest from Git
+echo "📦 Performing git hard reset and pull..."
 git reset --hard
-git pull origin main
+git clean -fd
+git checkout $BRANCH
+git pull origin $BRANCH
 
+# Activate virtual environment
+echo "🐍 Installing new/updated Python dependencies..."
+source "$VENV_PATH/bin/activate"
+pip install --upgrade pip
+pip install -r "$APP_DIR/requirements.txt"
+deactivate
 
-# === STEP 2: Activate and install Python dependencies ===
-echo "Activating virtual environment..."
-source "$HOME/my_venv/bin/activate"
+# Restart the app (assuming .bash_profile/startx handles app restart)
+echo "🔁 Restarting app..."
+pkill -f startx || true
+sleep 2
 
-# Optional: If you have a requirements.txt and want to install system-wide
-if [ -f requirements.txt ]; then
-  echo "📦 Installing dependencies system-wide..."
-  pip3 install -r requirements.txt
-fi
-
-
-echo "💀 Killing old app instances..."
-pkill -f main.py
-
-echo "💀 Killing old X server if running..."
-pkill Xorg
-
-echo "🚀 Starting X server and app..."
-startx &
-
-echo "✅ Update complete."
+echo "✅ Update complete. App will auto-relaunch via login/startx."
