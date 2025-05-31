@@ -8,8 +8,10 @@ from kivy.clock import Clock
 from kivy.uix.textinput import TextInput
 from kivy.uix.floatlayout import FloatLayout
 from kivy.core.window import Window
+from kivy.uix.vkeyboard import VKeyboard
 import subprocess
 import threading
+import sys
 
 class WifiNetworkScreen(Screen):
     def __init__(self, **kwargs):
@@ -49,40 +51,65 @@ class WifiNetworkScreen(Screen):
 
     def scan_networks(self):
         try:
-            connected = subprocess.check_output("nmcli -t -f active,ssid dev wifi", shell=True).decode()
-            active_ssid = None
-            for line in connected.splitlines():
-                if line.startswith("yes:"):
-                    active_ssid = line.split(":", 1)[1]
-                    break
+            if sys.platform.startswith('win'):
+                dummy_networks = [
+                    ("TestWiFi_1", "78"),
+                    ("MyHomeNetwork", "64"),
+                    ("GuestWiFi", "55"),
+                    ("CafeNet", "40"),
+                    ("PublicFreeWiFi", "25")
+                ]
+                active_ssid = "MyHomeNetwork"
 
-            result = subprocess.check_output("nmcli -t -f ssid,signal dev wifi", shell=True).decode()
-            networks = []
-            for line in result.splitlines():
-                parts = line.strip().split(":")
-                if len(parts) == 2:
-                    ssid, signal = parts
-                    if ssid:
-                        networks.append((ssid, signal))
+                def update_ui():
+                    self.network_box.clear_widgets()
+                    self.network_buttons.clear()
+                    for ssid, signal in dummy_networks:
+                        btn_text = f"{ssid} ({signal}%)"
+                        btn = Button(text=btn_text, size_hint_y=None, height=50)
+                        btn.bind(on_press=self.on_network_selected)
+                        self.network_box.add_widget(btn)
+                        self.network_buttons[btn] = ssid
+                        if ssid == active_ssid:
+                            btn.background_color = (0, 1, 0, 1)
+                            self.current_ssid = ssid
 
-            def update_ui():
-                self.network_box.clear_widgets()
-                self.network_buttons.clear()
-                for ssid, signal in networks:
-                    btn_text = f"{ssid} ({signal}%)"
-                    btn = Button(text=btn_text, size_hint_y=None, height=50)
-                    btn.bind(on_press=self.on_network_selected)
-                    self.network_box.add_widget(btn)
-                    self.network_buttons[btn] = ssid
-                    if ssid == active_ssid:
-                        btn.background_color = (0, 1, 0, 1)
-                        self.current_ssid = ssid
+                Clock.schedule_once(lambda dt: update_ui())
+            else:
+                connected = subprocess.check_output("nmcli -t -f active,ssid dev wifi", shell=True).decode()
+                active_ssid = None
+                for line in connected.splitlines():
+                    if line.startswith("yes:"):
+                        active_ssid = line.split(":", 1)[1]
+                        break
 
-            Clock.schedule_once(lambda dt: update_ui())
+                result = subprocess.check_output("nmcli -t -f ssid,signal dev wifi", shell=True).decode()
+                networks = []
+                for line in result.splitlines():
+                    parts = line.strip().split(":")
+                    if len(parts) == 2:
+                        ssid, signal = parts
+                        if ssid:
+                            networks.append((ssid, signal))
+
+                def update_ui():
+                    self.network_box.clear_widgets()
+                    self.network_buttons.clear()
+                    for ssid, signal in networks:
+                        btn_text = f"{ssid} ({signal}%)"
+                        btn = Button(text=btn_text, size_hint_y=None, height=50)
+                        btn.bind(on_press=self.on_network_selected)
+                        self.network_box.add_widget(btn)
+                        self.network_buttons[btn] = ssid
+                        if ssid == active_ssid:
+                            btn.background_color = (0, 1, 0, 1)
+                            self.current_ssid = ssid
+
+                Clock.schedule_once(lambda dt: update_ui())
 
         except Exception as e:
             msg = str(e)
-            Clock.schedule_once(lambda dt: self.show_popup("Error", msg))
+            Clock.schedule_once(lambda dt, msg=msg: self.show_popup("Error", msg))
 
     def on_network_selected(self, instance):
         ssid = self.network_buttons[instance]
@@ -92,10 +119,26 @@ class WifiNetworkScreen(Screen):
             self.prompt_password(ssid)
 
     def prompt_password(self, ssid):
-        content = BoxLayout(orientation='vertical')
-        input_field = TextInput(hint_text='Enter password', password=True, multiline=False)
-        input_field.bind(focus=self.toggle_keyboard)
+        content = FloatLayout()
+
+        input_field = TextInput(
+            hint_text='Enter password',
+            password=True,
+            multiline=False,
+            size_hint=(0.9, None),
+            height=40,
+            pos_hint={'center_x': 0.5, 'top': 0.95},
+            focus=True
+        )
         content.add_widget(input_field)
+
+        keyboard = VKeyboard(
+            layout='qwerty',
+            size_hint=(1, 0.5),
+            pos_hint={'x': 0, 'y': 0}
+        )
+        keyboard.target = input_field
+        content.add_widget(keyboard)
 
         def on_connect(instance):
             password = input_field.text.strip()
@@ -103,20 +146,18 @@ class WifiNetworkScreen(Screen):
                 popup.dismiss()
                 self.connect_to_network(ssid, password)
 
-        connect_button = Button(text='Connect', size_hint_y=None, height=40)
+        connect_button = Button(
+            text='Connect',
+            size_hint=(0.5, None),
+            height=40,
+            pos_hint={'center_x': 0.5, 'y': 0.52}
+        )
         connect_button.bind(on_press=on_connect)
         content.add_widget(connect_button)
 
-        popup = Popup(title=f"Connect to {ssid}", content=content, size_hint=(0.9, 0.5))
+        popup = Popup(title=f"Connect to {ssid}", content=content, size_hint=(0.95, 0.8))
         popup.open()
         self.text_input_ref = input_field
-
-    def toggle_keyboard(self, instance, value):
-        if value:
-            Window.request_keyboard(self.keyboard_closed, self, 'text')
-
-    def keyboard_closed(self):
-        pass
 
     def connect_to_network(self, ssid, password):
         try:
