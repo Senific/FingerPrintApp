@@ -1,12 +1,11 @@
 import os
-import logging
-from subprocess import run, CalledProcessError
 from kivy.uix.screenmanager import Screen
 from kivy.uix.button import Button
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
-
+from subprocess import run, CalledProcessError
+import logging
 
 class WifiConnectScreen(Screen):
     def __init__(self, **kwargs):
@@ -28,7 +27,7 @@ class WifiConnectScreen(Screen):
             password=True,
             size_hint=(0.8, 0.1),
             pos_hint={"center_x": 0.5, "center_y": 0.55},
-            text='K255#1345'
+            text="K255#1345"
         )
         layout.add_widget(self.pass_input)
 
@@ -73,70 +72,24 @@ class WifiConnectScreen(Screen):
             return
 
         try:
-            self.status_label.text = "Updating Wi-Fi config..."
-            logging.info(self.status_label.text)
-            self.update_wifi_config(ssid, password)
+            self.status_label.text = "Connecting to Wi-Fi..."
+            logging.info(f"Connecting to Wi-Fi: {ssid}")
 
-            self.status_label.text = "Restarting Wi-Fi (nmcli)..."
-            logging.info(self.status_label.text)
+            result = run(
+                ["sudo", "nmcli", "device", "wifi", "connect", ssid, "password", password],
+                check=True,
+                capture_output=True,
+                text=True
+            )
 
-            # Connect using NetworkManager (nmcli)
-            run(["sudo", "nmcli", "device", "wifi", "connect", ssid, "password", password], check=True)
-
-            self.status_label.text = f"✅ Connected to {ssid}"
-            logging.info(f"Wi-Fi connected to {ssid}")
-
+            logging.info(f"nmcli output: {result.stdout.strip()}")
+            self.status_label.text = "✅ Connected to Wi-Fi!"
         except CalledProcessError as e:
-            self.status_label.text = f"❌ Failed to connect: {e}"
-            logging.error(f"Wi-Fi reconnect error: {e}")
+            logging.error(f"nmcli error: {e.stderr.strip()}")
+            self.status_label.text = "❌ Wi-Fi connection failed."
         except Exception as e:
-            self.status_label.text = f"Error: {e}"
-            logging.error("Wifi Connect Exception:")
-            logging.exception(e)
-
-    def update_wifi_config(self, ssid, password):
-        import logging
-        import os
-
-        config_path = "/etc/wpa_supplicant/wpa_supplicant.conf"
-        tmp_path = "/tmp/wpa_supplicant.conf.tmp"
-        backup_path = "/etc/wpa_supplicant/wpa_supplicant.conf.bak"
-
-        # Read current config
-        try:
-            with open(config_path, "r") as f:
-                content = f.read()
-        except FileNotFoundError:
-            logging.warning("No existing wpa_supplicant.conf found. Creating a new one.")
-            content = "ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev\nupdate_config=1\ncountry=US\n"
-
-        # Check if the SSID already exists (case-insensitive)
-        if f'ssid="{ssid}"' in content:
-            logging.info(f"SSID '{ssid}' already exists in config. Skipping add.")
-            return
-
-        logging.info("Backing up existing config...")
-        run(["sudo", "cp", config_path, backup_path], check=False)
-
-        # Append new network block
-        network_block = f'''
-    network={{
-        ssid="{ssid}"
-        psk="{password}"\n}}''' if password else f'''
-    network={{
-        ssid="{ssid}"
-        key_mgmt=NONE\n}}'''
-
-        new_content = content.strip() + "\n" + network_block + "\n"
-
-        with open(tmp_path, "w") as f:
-            f.write(new_content)
-
-        # Replace the original file with the updated one
-        run(["sudo", "mv", tmp_path, config_path], check=True)
-
-        logging.info("✅ wpa_supplicant.conf updated successfully.")
-
+            logging.exception("Unexpected error during Wi-Fi connect")
+            self.status_label.text = f"❌ Error: {e}"
 
     def go_back(self, instance):
         if self.manager:
