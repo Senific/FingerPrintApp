@@ -2,36 +2,57 @@
 
 set -e
 
-APP_DIR="/home/admin/FingerPrintApp"
-VENV_DIR="/home/admin/senific_venv"
+echo "🔧 Step 1: Setup virtual environment outside repo..."
+ENV_PATH="/home/admin/senific_env"
+APP_PATH="/home/admin/FingerPrintApp"
 PYTHON_BIN="/usr/bin/python3"
 
-echo "🔧 Step 1: Creating Python virtual environment at $VENV_DIR..."
-if [ ! -d "$VENV_DIR" ]; then
-    $PYTHON_BIN -m venv "$VENV_DIR"
+if [ ! -d "$ENV_PATH" ]; then
+    $PYTHON_BIN -m venv "$ENV_PATH"
+    echo "✅ Virtual environment created at $ENV_PATH"
+else
+    echo "⚠️ Virtual environment already exists at $ENV_PATH"
 fi
 
-echo "📦 Step 2: Activating virtual environment and installing dependencies..."
-source "$VENV_DIR/bin/activate"
+echo "🔧 Step 2: Activate environment and install requirements..."
+source "$ENV_PATH/bin/activate"
+
 pip install --upgrade pip
-pip install kivy
+pip install kivy pillow
 
-echo "🖥️ Step 3: Installing ILI9486 LCD driver..."
+deactivate
+echo "✅ Dependencies installed."
 
-# Install required packages
-sudo apt-get update
-sudo apt-get install -y cmake dkms git raspberrypi-kernel-headers
+echo "🔧 Step 3: Create systemd service..."
 
-# Clone LCD driver repo outside app directory
-LCD_DRIVER_DIR="/home/admin/ili9486_driver"
-if [ ! -d "$LCD_DRIVER_DIR" ]; then
-    git clone https://github.com/Elecrow-keen/Elecrow-LCD35.git "$LCD_DRIVER_DIR"
-fi
+SERVICE_FILE="/etc/systemd/system/fingerprint-kiosk.service"
 
-cd "$LCD_DRIVER_DIR"
-sudo bash ./LCD35-show
+sudo tee "$SERVICE_FILE" > /dev/null <<EOL
+[Unit]
+Description=Start FingerPrintApp in kiosk mode
+After=network.target
 
-echo "✅ LCD driver installed — Raspberry Pi will reboot to apply changes."
-echo "🌀 Rebooting in 5 seconds... Press Ctrl+C to cancel."
-sleep 5
-sudo reboot
+[Service]
+User=admin
+Environment=PYTHONUNBUFFERED=1
+WorkingDirectory=$APP_PATH
+ExecStart=$ENV_PATH/bin/python $APP_PATH/main.py
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/fingerprint_app.log
+StandardError=append:/var/log/fingerprint_app.log
+
+[Install]
+WantedBy=multi-user.target
+EOL
+
+echo "✅ Service created at $SERVICE_FILE"
+
+echo "🔧 Step 4: Enable and start the service..."
+sudo systemctl daemon-reexec
+sudo systemctl daemon-reload
+sudo systemctl enable fingerprint-kiosk.service
+sudo systemctl restart fingerprint-kiosk.service
+
+echo "✅ App will now auto-start on reboot and auto-restart if it crashes."
+echo "📄 Logs will be available at /var/log/fingerprint_app.log"
