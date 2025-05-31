@@ -1,7 +1,48 @@
+import os
+import sys
+
 from kivy.config import Config
-Config.set('input', 'mouse', 'mouse,multitouch_on_demand')  # disables multitouch simulation from mouse
-Config.set('graphics', 'show_cursor', '0')  # hides the system cursor
-Config.set('modules', 'touchring', '')  # disables the black cross
+# Detect if running on Raspberry Pi
+is_raspberry = False
+
+if sys.platform == "linux":
+    try:
+        with open("/proc/cpuinfo", "r") as f:
+            cpuinfo = f.read()
+        is_raspberry = "Raspberry Pi" in cpuinfo or "BCM" in cpuinfo
+    except:
+        pass
+
+# Input setup
+Config.set('input', 'mouse', 'mouse,multitouch_on_demand')  # No multitouch emulation
+
+# Cursor visibility based on device
+if is_raspberry:
+    Config.set('graphics', 'show_cursor', '0')  # Hide cursor on Raspberry Pi
+else:
+    Config.set('graphics', 'show_cursor', '1')  # Show cursor elsewhere
+
+# Disable the touch cross
+Config.set('modules', 'touchring', '')
+
+
+import logging
+from datetime import datetime
+
+# Path to admin's home directory
+log_dir = os.path.expanduser("~admin")
+log_file = os.path.join(log_dir, "fingerprint_debug.log")
+
+# Ensure directory exists (it should already exist, but just in case)
+os.makedirs(log_dir, exist_ok=True)
+
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    filename=log_file,
+    filemode="a"
+)
 
 from kivy.core.window import Window
 from idleScreen import IdleScreen
