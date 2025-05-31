@@ -89,7 +89,8 @@ class WifiConnectScreen(Screen):
             self.status_label.text = f"Failed to restart Wi-Fi: {e}"
         except Exception as e:
             self.status_label.text = f"Error: {e}"
-            logging.error(f"Wifi Connect Exception:")
+            logging.error("Wifi Connect Exception:")
+            logging.error(e)
             
 
     def update_wifi_config(self, ssid, password):
