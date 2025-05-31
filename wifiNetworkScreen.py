@@ -182,11 +182,12 @@ class WifiNetworkScreen(Screen):
             try:
                 result = subprocess.check_output("nmcli -t -f NAME,DEVICE connection show --active", shell=True).decode()
                 for line in result.strip().splitlines():
-                    name, device = line.split(":")
-                    if device == "wlan0":
-                        subprocess.run(["nmcli", "connection", "down", name], check=False)
-                        subprocess.run(["nmcli", "connection", "delete", name], check=False)
-                        break
+                    if ":" in line:
+                        name, device = line.split(":", 1)
+                        if device == "wlan0":
+                            subprocess.run(["nmcli", "device", "disconnect", "wlan0"], check=False)
+                            subprocess.run(["nmcli", "connection", "delete", name], check=False)
+                            break
                 self.current_ssid = None
                 Clock.schedule_once(lambda dt: self.refresh_networks(0))
             except Exception as e:
