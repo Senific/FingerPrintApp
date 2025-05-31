@@ -1,57 +1,37 @@
 #!/bin/bash
+
 set -e
 
-# === CONFIG ===
-APP_DIR="FingerPrintApp"
-VENV_DIR="$HOME/my_venv"
-PYTHON_BIN="$VENV_DIR/bin/python3"
-PIP_BIN="$VENV_DIR/bin/pip"
+APP_DIR="/home/admin/FingerPrintApp"
+VENV_DIR="/home/admin/senific_venv"
+PYTHON_BIN="/usr/bin/python3"
 
-echo "=========================="
-echo "Installing system packages"
-echo "=========================="
-sudo apt update
-sudo apt install -y \
-  python3 python3-venv python3-pip git \
-  libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev \
-  libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev \
-  zlib1g-dev libgstreamer1.0-dev gstreamer1.0-plugins-base \
-  gstreamer1.0-plugins-good gstreamer1.0-plugins-bad \
-  gstreamer1.0-libav gstreamer1.0-alsa libmtdev-dev \
-  libgl1-mesa-dev libgles2-mesa-dev xclip xsel libjpeg-dev
-
-sudo apt update
-sudo apt-get install -y \
-  libavcodec-dev \
-  libavdevice-dev \
-  libavfilter-dev \
-  libavformat-dev \
-  libavutil-dev \
-  libswscale-dev \
-  libswresample-dev \
-  libpostproc-dev \
-  libsdl2-dev
-
-
-# === STEP 1: Create virtual environment ===
+echo "🔧 Step 1: Creating Python virtual environment at $VENV_DIR..."
 if [ ! -d "$VENV_DIR" ]; then
-  echo "Creating virtual environment..."
-  python3 -m venv "$VENV_DIR"
+    $PYTHON_BIN -m venv "$VENV_DIR"
 fi
 
-# === STEP 2: Activate and install Python dependencies ===
-echo "Activating virtual environment..."
+echo "📦 Step 2: Activating virtual environment and installing dependencies..."
 source "$VENV_DIR/bin/activate"
+pip install --upgrade pip
+pip install kivy
 
-echo "Upgrading pip and installing dependencies..."
-$PIP_BIN install --upgrade pip setuptools wheel Cython
+echo "🖥️ Step 3: Installing ILI9486 LCD driver..."
 
-# Use kivy[full] if you need audio/video support, or kivy[base] if not
-echo "Installing Kivy and dependencies..."
-$PIP_BIN install kivy
+# Install required packages
+sudo apt-get update
+sudo apt-get install -y cmake dkms git raspberrypi-kernel-headers
 
-# === STEP 3: Run the app ===
-echo "Running the Kivy app..."
-cd ..
-cd "$APP_DIR"
-$PYTHON_BIN main.py
+# Clone LCD driver repo outside app directory
+LCD_DRIVER_DIR="/home/admin/ili9486_driver"
+if [ ! -d "$LCD_DRIVER_DIR" ]; then
+    git clone https://github.com/Elecrow-keen/Elecrow-LCD35.git "$LCD_DRIVER_DIR"
+fi
+
+cd "$LCD_DRIVER_DIR"
+sudo bash ./LCD35-show
+
+echo "✅ LCD driver installed — Raspberry Pi will reboot to apply changes."
+echo "🌀 Rebooting in 5 seconds... Press Ctrl+C to cancel."
+sleep 5
+sudo reboot

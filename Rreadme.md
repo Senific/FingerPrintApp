@@ -1,10 +1,7 @@
 Do Following Steps on a Fresh Raspbery Pi 64bit lite OS Installation
 
 sudo apt update
-sudo apt install -y git
-
-
-
+sudo apt install -y git 
 
 git clone https://github.com/Senific/FingerPrintApp.git
 cd FingerPrintApp
