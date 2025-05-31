@@ -169,7 +169,15 @@ class WifiNetworkScreen(Screen):
         content.add_widget(lbl)
 
         def do_disconnect(instance):
-            subprocess.run(["nmcli", "connection", "down", "SenificWiFi"], check=False)
+            try:
+                result = subprocess.check_output("nmcli -t -f NAME,DEVICE connection show --active", shell=True).decode()
+                for line in result.strip().splitlines():
+                    name, device = line.split(":")
+                    if device == "wlan0":
+                        subprocess.run(["nmcli", "connection", "down", name], check=False)
+                        break
+            except Exception as e:
+                self.show_popup("Error", str(e))
             popup.dismiss()
 
         btn = Button(text="Disconnect", size_hint_y=None, height=40)
