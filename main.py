@@ -7,9 +7,9 @@ from menuScreen import MenuScreen
 from wifiConnectScreen import WifiConnectScreen
 
 # Desired window size
-# win_width, win_height = 480, 320
-# Window.size = (win_width, win_height)
-# Window.fullscreen = False
+#win_width, win_height = 480, 320
+#Window.size = (win_width, win_height)
+Window.fullscreen = True
 
 # Get the screen width and height (physical monitor resolution)
 #screen_width, screen_height = Window.system_size  # Kivy 2.1+ provides system_size
