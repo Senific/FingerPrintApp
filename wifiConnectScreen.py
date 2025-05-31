@@ -1,5 +1,6 @@
 
 import os 
+
 from kivy.uix.screenmanager import Screen
 from kivy.uix.button import Button
 from kivy.uix.floatlayout import FloatLayout
@@ -93,43 +94,52 @@ class WifiConnectScreen(Screen):
             self.status_label.text = f"Error: {e}"
             logging.error("Wifi Connect Exception:")
             logging.error(e)
-             
-
-    def connect_wifi(self, instance):
-        ssid = self.ssid_input.text.strip()
-        password = self.pass_input.text.strip()
-
-        if not ssid:
-            self.status_label.text = "SSID cannot be empty"
-            return
+     
+    def update_wifi_config(self, ssid, password):
+        config_path = "/etc/wpa_supplicant/wpa_supplicant.conf"
+        backup_path = "/etc/wpa_supplicant/wpa_supplicant.conf.bak"
+        tmp_path = "/tmp/wpa_supplicant.conf.tmp"
 
         try:
-            self.status_label.text = "Updating Wi-Fi config..."
-            logging.info(self.status_label.text)
-            self.update_wifi_config(ssid, password)
+            if os.path.exists(config_path):
+                logging.info("Backing up existing config...")
+                run(["sudo", "cp", config_path, backup_path], check=True)
+            else:
+                logging.warning("No existing wpa_supplicant.conf found. Creating a new one.")
 
-            # Terminate old wpa_supplicant process
-            self.status_label.text = "Restarting Wi-Fi service..."
-            logging.info(self.status_label.text)
-            run(["sudo", "killall", "wpa_supplicant"], check=False)
+            network_block = '\nnetwork={\n'
+            network_block += f'    ssid="{ssid}"\n'
+            if password:
+                network_block += f'    psk="{password}"\n'
+            else:
+                network_block += '    key_mgmt=NONE\n'
+            network_block += '}\n'
 
-            # Restart dhcpcd (optional but helps)
-            run(["sudo", "systemctl", "restart", "dhcpcd"], check=True)
+            if os.path.exists(config_path):
+                with open(config_path, "r") as f:
+                    content = f.read()
+            else:
+                content = 'ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev\n'
+                content += 'update_config=1\n'
+                content += 'country=US\n'
 
-            # Reload config to wpa_supplicant
-            run(["sudo", "wpa_cli", "-i", "wlan0", "reconfigure"], check=True)
+            new_content = content.strip() + network_block
 
-            self.status_label.text = "Reconnecting to Wi-Fi..."
-            logging.info("Wi-Fi reconfigure triggered.")
-            
+            with open(tmp_path, "w") as f:
+                f.write(new_content)
+
+            run(["sudo", "mv", tmp_path, config_path], check=True)
+            logging.info("✅ wpa_supplicant.conf updated successfully.")
+
         except CalledProcessError as e:
-            self.status_label.text = f"Failed to restart Wi-Fi: {e}"
-            logging.error(f"Wi-Fi reconnect error: {e}")
+            logging.error(f"❌ System command failed: {e}")
+            raise
         except Exception as e:
-            self.status_label.text = f"Error: {e}"
-            logging.error("Wifi Connect Exception:")
+            logging.error("❌ update_wifi_config failed")
             logging.exception(e)
+            raise
 
+              
  
     def go_back(self, instance):
         if self.manager:
