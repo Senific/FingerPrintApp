@@ -19,17 +19,25 @@ class WifiManagerScreen(Screen):
         self.status_label = Label(text="🔍 Scanning for Wi-Fi...", size_hint=(1, 0.1))
         main_layout.add_widget(self.status_label)
 
-        self.scroll_view = ScrollView(size_hint=(1, 0.8))
+        self.scroll_view = ScrollView(size_hint=(1, 0.6))
         self.network_list = GridLayout(cols=1, spacing=5, size_hint_y=None)
         self.network_list.bind(minimum_height=self.network_list.setter('height'))
         self.scroll_view.add_widget(self.network_list)
         main_layout.add_widget(self.scroll_view)
 
-        self.disconnect_btn = Button(text="❌ Disconnect Wi-Fi", size_hint=(1, 0.1))
-        self.disconnect_btn.bind(on_press=self.disconnect_wifi)
-        main_layout.add_widget(self.disconnect_btn)
+        action_buttons = BoxLayout(size_hint=(1, 0.2), spacing=10)
 
+        self.disconnect_btn = Button(text="❌ Disconnect Wi-Fi")
+        self.disconnect_btn.bind(on_press=self.disconnect_wifi)
+        action_buttons.add_widget(self.disconnect_btn)
+
+        self.back_btn = Button(text="🔙 Back to Menu")
+        self.back_btn.bind(on_press=self.go_back)
+        action_buttons.add_widget(self.back_btn)
+
+        main_layout.add_widget(action_buttons)
         self.add_widget(main_layout)
+
         self.scan_networks()
 
     def scan_networks(self):
@@ -80,6 +88,9 @@ class WifiManagerScreen(Screen):
 
     def connect_to_wifi(self, ssid, password):
         try:
+            logging.info(f"Updating Wi-Fi to SSID: {ssid}")
+            self.status_label.text = f"🔄 Connecting to {ssid}..."
+
             subprocess.run(["nmcli", "connection", "delete", "SenificWiFi"],
                            check=False, capture_output=True)
 
@@ -100,3 +111,7 @@ class WifiManagerScreen(Screen):
         except subprocess.CalledProcessError as e:
             self.status_label.text = f"❌ Disconnection failed: {e}"
             logging.error("Wi-Fi disconnect failed", exc_info=True)
+
+    def go_back(self, instance):
+        if self.manager:
+            self.manager.current = "menu"
