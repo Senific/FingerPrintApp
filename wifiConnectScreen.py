@@ -75,15 +75,16 @@ class WifiConnectScreen(Screen):
             self.status_label.text = "SSID cannot be empty"
             return
 
-        try:
-            logging.info("Updating Wifi Config")
+        try: 
             self.status_label.text = "Updating Wi-Fi config..."
+            logging.info(self.status_label.text)
             self.update_wifi_config(ssid, password)
             self.status_label.text = "Wi-Fi config updated. Restarting interface..."
-
+            logging.info(self.status_label.text)
             run(["sudo", "wpa_cli", "-i", "wlan0", "reconfigure"], check=True)
 
             self.status_label.text = "Wi-Fi connected (or reconnecting)."
+            logging.info(self.status_label.text)
         except CalledProcessError as e:
             self.status_label.text = f"Failed to restart Wi-Fi: {e}"
         except Exception as e:
