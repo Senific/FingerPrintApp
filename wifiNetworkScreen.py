@@ -84,13 +84,6 @@ class WifiNetworkScreen(Screen):
 
                 Clock.schedule_once(lambda dt: update_ui())
             else:
-                connected = subprocess.check_output("nmcli -t -f active,ssid dev wifi", shell=True).decode()
-                active_ssid = None
-                for line in connected.splitlines():
-                    if line.startswith("yes:"):
-                        active_ssid = line.split(":", 1)[1]
-                        break
-
                 result = subprocess.check_output("nmcli -t -f ssid,signal dev wifi", shell=True).decode()
                 networks = []
                 for line in result.splitlines():
@@ -109,9 +102,8 @@ class WifiNetworkScreen(Screen):
                         btn.bind(on_press=self.on_network_selected)
                         self.network_box.add_widget(btn)
                         self.network_buttons[btn] = ssid
-                        if ssid == active_ssid:
+                        if ssid == self.current_ssid:
                             btn.background_color = (0, 1, 0, 1)
-                            self.current_ssid = ssid
 
                 Clock.schedule_once(lambda dt: update_ui())
 
@@ -167,7 +159,7 @@ class WifiNetworkScreen(Screen):
         self.text_input_ref = input_field
 
     def connect_to_network(self, ssid, password):
-        self.show_popup("Connecting", f"Connecting to {ssid}...")
+        Clock.schedule_once(lambda dt: self.show_popup("Connecting", f"Connecting to {ssid}..."))
 
         def do_connect():
             try:
@@ -193,6 +185,7 @@ class WifiNetworkScreen(Screen):
                     name, device = line.split(":")
                     if device == "wlan0":
                         subprocess.run(["nmcli", "connection", "down", name], check=False)
+                        subprocess.run(["nmcli", "connection", "delete", name], check=False)
                         break
                 self.current_ssid = None
                 Clock.schedule_once(lambda dt: self.refresh_networks(0))
