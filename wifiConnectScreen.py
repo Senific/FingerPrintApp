@@ -4,6 +4,7 @@ from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
 from subprocess import run, CalledProcessError
+import logging;
 
 class WifiConnectScreen(Screen):
     def __init__(self, **kwargs):
@@ -86,6 +87,7 @@ class WifiConnectScreen(Screen):
             self.status_label.text = f"Failed to restart Wi-Fi: {e}"
         except Exception as e:
             self.status_label.text = f"Error: {e}"
+            logging.debug('Wifi Connect Exception : '  + e)
 
     def update_wifi_config(self, ssid, password):
         run(["sudo", "cp", "/etc/wpa_supplicant/wpa_supplicant.conf", "/etc/wpa_supplicant/wpa_supplicant.conf.bak"], check=True)

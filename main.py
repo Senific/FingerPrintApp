@@ -31,7 +31,7 @@ from datetime import datetime
 
 # Path to admin's home directory
 log_dir = os.path.expanduser("~admin")
-log_file = os.path.join(log_dir, "fingerprint_debug.log")
+log_file = os.path.join(log_dir, "app_debug.log")
 
 # Ensure directory exists (it should already exist, but just in case)
 os.makedirs(log_dir, exist_ok=True)
