@@ -16,6 +16,7 @@ class WifiConnectScreen(Screen):
             multiline=False,
             size_hint=(0.8, 0.1),
             pos_hint={"center_x": 0.5, "center_y": 0.7},
+            text= 'Kasun\'iphone'
         )
         layout.add_widget(self.ssid_input)
 
@@ -26,6 +27,7 @@ class WifiConnectScreen(Screen):
             password=True,
             size_hint=(0.8, 0.1),
             pos_hint={"center_x": 0.5, "center_y": 0.55},
+            text= 'K255#1345'
         )
         layout.add_widget(self.pass_input)
 
