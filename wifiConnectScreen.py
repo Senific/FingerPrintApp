@@ -1,14 +1,15 @@
+import os
 import logging
+from subprocess import run, CalledProcessError
 from kivy.uix.screenmanager import Screen
 from kivy.uix.button import Button
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
-from subprocess import run, CalledProcessError, PIPE
-
-PROFILE_NAME = "SenificWiFi"
 
 class WifiConnectScreen(Screen):
+    PROFILE_NAME = "SenificWiFi"
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         layout = FloatLayout()
@@ -18,7 +19,7 @@ class WifiConnectScreen(Screen):
             multiline=False,
             size_hint=(0.8, 0.1),
             pos_hint={"center_x": 0.5, "center_y": 0.7},
-            text="Kasun’s iPhone"
+            text="Kasun'iphone"
         )
         layout.add_widget(self.ssid_input)
 
@@ -37,8 +38,8 @@ class WifiConnectScreen(Screen):
             size_hint=(0.8, 0.1),
             pos_hint={"center_x": 0.5, "center_y": 0.4},
             color=(1, 0, 0, 1),
-            halign='center',
-            valign='middle'
+            halign="center",
+            valign="middle"
         )
         self.status_label.bind(size=self._update_text_size)
         layout.add_widget(self.status_label)
@@ -64,41 +65,41 @@ class WifiConnectScreen(Screen):
     def _update_text_size(self, instance, value):
         instance.text_size = instance.size
 
+    def sanitize(self, text):
+        return text.replace("’", "'").replace("‘", "'").strip()
+
     def connect_wifi(self, instance):
-        ssid = self.ssid_input.text.strip()
-        password = self.pass_input.text.strip()
+        ssid = self.sanitize(self.ssid_input.text)
+        password = self.sanitize(self.pass_input.text)
 
         if not ssid:
             self.status_label.text = "SSID cannot be empty"
             return
 
         try:
-            self.status_label.text = "Updating Wi-Fi profile..."
-            logging.info(f"Updating Wi-Fi to SSID: {ssid}")
+            self.status_label.text = f"Updating Wi-Fi to SSID: {ssid}"
+            logging.info(self.status_label.text)
 
-            # Delete previous profile if exists
-            run(["nmcli", "connection", "delete", PROFILE_NAME], stdout=PIPE, stderr=PIPE)
+            # Disconnect existing managed profile if present
+            run(["nmcli", "connection", "delete", self.PROFILE_NAME], check=False)
 
-            # Create and connect with new profile
+            # Create and connect using a new profile
             run([
                 "nmcli", "device", "wifi", "connect", ssid,
                 "password", password,
-                "name", PROFILE_NAME
+                "name", self.PROFILE_NAME
             ], check=True)
 
-            # Set autoconnect and higher priority
-            run(["nmcli", "connection", "modify", PROFILE_NAME, "connection.autoconnect", "yes"], check=True)
-            run(["nmcli", "connection", "modify", PROFILE_NAME, "connection.autoconnect-priority", "10"], check=True)
-
-            self.status_label.text = f"✅ Connected to {ssid}"
-            logging.info(f"Connected to {ssid} via NetworkManager")
+            self.status_label.text = "Wi-Fi updated and connected."
+            logging.info("Wi-Fi connected successfully.")
 
         except CalledProcessError as e:
-            self.status_label.text = f"❌ Failed to connect: {e}"
+            self.status_label.text = f"nmcli error: {e}"
             logging.error(f"nmcli error: {e}")
+
         except Exception as e:
-            self.status_label.text = f"❌ Error: {e}"
-            logging.exception("Unhandled Wi-Fi config error")
+            self.status_label.text = f"Error: {e}"
+            logging.exception("Unhandled error during Wi-Fi connection.")
 
     def go_back(self, instance):
         if self.manager:
