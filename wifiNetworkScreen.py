@@ -129,21 +129,6 @@ class WifiNetworkScreen(Screen):
         )
         content.add_widget(input_field)
 
-        connect_button = Button(
-            text='Connect',
-            size_hint=(1, None),
-            height=40
-        )
-
-        def on_connect(instance):
-            password = input_field.text.strip()
-            if password:
-                popup.dismiss()
-                self.connect_to_network(ssid, password)
-
-        connect_button.bind(on_press=on_connect)
-        content.add_widget(connect_button)
-
         popup = Popup(
             title=f"Connect to {ssid}",
             content=content,
@@ -151,8 +136,24 @@ class WifiNetworkScreen(Screen):
             height=200,
             auto_dismiss=True
         )
-        popup.open()
 
+        def on_connect(instance):
+            password = input_field.text.strip()
+            if password:
+                popup.dismiss()
+                self.connect_to_network(ssid, password)
+            else:
+                self.show_popup("Input Error", "Password cannot be empty")
+
+        connect_button = Button(
+            text='Connect',
+            size_hint=(1, None),
+            height=40
+        )
+        connect_button.bind(on_press=on_connect)
+        content.add_widget(connect_button)
+
+        popup.open()
         Clock.schedule_once(lambda dt: setattr(input_field, 'focus', True), 0.1)
         self.text_input_ref = input_field
 
@@ -160,7 +161,7 @@ class WifiNetworkScreen(Screen):
         try:
             subprocess.run(["nmcli", "connection", "delete", "SenificWiFi"], check=False)
             subprocess.run(["nmcli", "device", "wifi", "connect", ssid, "password", password, "name", "SenificWiFi"], check=True)
-            self.current_ssid = ssid  # Update current_ssid on successful connection
+            self.current_ssid = ssid
             Clock.schedule_once(lambda dt: self.refresh_networks(0))
         except subprocess.CalledProcessError as e:
             Clock.schedule_once(lambda dt, msg=str(e): self.show_popup("Connection Failed", msg))
@@ -178,7 +179,7 @@ class WifiNetworkScreen(Screen):
                     if device == "wlan0":
                         subprocess.run(["nmcli", "connection", "down", name], check=False)
                         break
-                self.current_ssid = None  # Clear current_ssid after disconnect
+                self.current_ssid = None
                 Clock.schedule_once(lambda dt: self.refresh_networks(0))
             except Exception as e:
                 Clock.schedule_once(lambda dt, msg=str(e): self.show_popup("Error", msg))
