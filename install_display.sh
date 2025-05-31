@@ -2,25 +2,32 @@
 
 set -e
 
-echo "=== Updating system ==="
-sudo apt update && sudo apt full-upgrade -y
+echo "🔧 Installing ILI9486 driver for 3.5\" LCD..."
 
-echo "=== Enabling SPI interface ==="
-sudo raspi-config nonint do_spi 0
+# Store current directory (your project repo)
+PROJECT_DIR=$(pwd)
 
-echo "=== Installing required packages ==="
-sudo apt install -y git fbi
+# Use a safe temp location outside the project
+WORK_DIR="$HOME/ILI9486_DriverInstall"
 
-echo "=== Cloning LCD driver repository to home directory ==="
-cd /home/admin
-if [ -d "/home/admin/LCD-show" ]; then
-    echo "LCD-show already exists, removing..."
-    rm -rf "/home/admin/LCD-show"
-fi
+# Step 1: Update system
+echo "📦 Updating system..."
+sudo apt update && sudo apt upgrade -y
 
-git clone https://github.com/goodtft/LCD-show.git /home/admin/LCD-show
-cd /home/admin/LCD-show
+# Step 2: Install required packages
+echo "📦 Installing dependencies..."
+sudo apt install -y git raspberrypi-kernel-headers build-essential dkms device-tree-compiler
+
+# Step 3: Clone the driver repo outside the project directory
+echo "📁 Cloning LCD-show repo to $WORK_DIR..."
+rm -rf "$WORK_DIR"
+git clone https://github.com/goodtft/LCD-show.git "$WORK_DIR"
+
+# Step 4: Run the install script
+cd "$WORK_DIR"
 chmod +x LCD35-show
 
-echo "=== Installing ILI9486 driver (will reboot) ==="
+echo "⚙️ Installing LCD35 (ILI9486) driver..."
 sudo ./LCD35-show
+
+# NOTE: This will reboot the Pi automatically if successful
