@@ -1,3 +1,6 @@
+from kivy.config import Config
+Config.set('modules', 'cursor', '')
+
 from kivy.core.window import Window
 from idleScreen import IdleScreen
 from menuScreen import MenuScreen
