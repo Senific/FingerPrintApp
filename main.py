@@ -1,8 +1,23 @@
-# import logging
-# logging.basicConfig(filename='app.log', level=logging.DEBUG)
+import logging
 import os
 os.environ["KIVY_BCM_DISPMANX_ID"] = "1"
  
+from datetime import datetime 
+# Log to a temporary file
+log_file = "/tmp/fingerprint_debug.log"
+logging.basicConfig(
+    filename=log_file,
+    level=logging.DEBUG,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logging.debug("App started at {}".format(datetime.now()))
+
+try:
+    # Import your app code
+    from main import FingerprintApp  # replace if needed
+    FingerprintApp().run()
+except Exception as e:
+    logging.exception("Exception occurred:")
 
 from kivy.core.window import Window
 from idleScreen import IdleScreen

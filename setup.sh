@@ -35,8 +35,9 @@ After=network.target
 [Service]
 User=admin
 Environment=PYTHONUNBUFFERED=1
-WorkingDirectory=$APP_PATH
-ExecStart=$ENV_PATH/bin/python $APP_PATH/main.py
+Environment=KIVY_BCM_DISPMANX_ID=1
+WorkingDirectory=/home/admin/FingerPrintApp
+ExecStart=/home/admin/senific_env/bin/python /home/admin/FingerPrintApp/main.py
 Restart=always
 RestartSec=5
 StandardOutput=append:/var/log/fingerprint_app.log
