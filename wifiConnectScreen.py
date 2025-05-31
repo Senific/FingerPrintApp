@@ -78,22 +78,29 @@ class WifiConnectScreen(Screen):
             self.status_label.text = "SSID cannot be empty"
             return
 
-        try: 
+        try:
             self.status_label.text = "Updating Wi-Fi config..."
             logging.info(self.status_label.text)
             self.update_wifi_config(ssid, password)
-            self.status_label.text = "Wi-Fi config updated. Restarting interface..."
+
+            self.status_label.text = "Restarting Wi-Fi service..."
             logging.info(self.status_label.text)
+
+            run(["sudo", "killall", "wpa_supplicant"], check=False)
+            run(["sudo", "systemctl", "restart", "dhcpcd"], check=True)
             run(["sudo", "wpa_cli", "-i", "wlan0", "reconfigure"], check=True)
 
-            self.status_label.text = "Wi-Fi connected (or reconnecting)."
-            logging.info(self.status_label.text)
+            self.status_label.text = "Reconnecting to Wi-Fi..."
+            logging.info("Wi-Fi reconfigure triggered.")
+
         except CalledProcessError as e:
             self.status_label.text = f"Failed to restart Wi-Fi: {e}"
+            logging.error(f"Wi-Fi reconnect error: {e}")
         except Exception as e:
             self.status_label.text = f"Error: {e}"
             logging.error("Wifi Connect Exception:")
-            logging.error(e)
+            logging.exception(e)
+
      
     def update_wifi_config(self, ssid, password):
         config_path = "/etc/wpa_supplicant/wpa_supplicant.conf"
