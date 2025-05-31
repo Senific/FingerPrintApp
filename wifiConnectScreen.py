@@ -91,15 +91,20 @@ class WifiConnectScreen(Screen):
             self.status_label.text = f"Error: {e}"
             logging.error("Wifi Connect Exception:")
             logging.error(e)
-            
-    def update_wifi_config(self, ssid, password):
-        try:
-            logging.debug("📡 Starting update_wifi_config")
+             
 
-            # Backup
-            run(["sudo", "/usr/local/bin/update_wifi.sh"], check=True)
- 
-            # Build config
+    def update_wifi_config(self, ssid, password):
+        config_path = "/etc/wpa_supplicant/wpa_supplicant.conf"
+        backup_path = "/etc/wpa_supplicant/wpa_supplicant.conf.bak"
+        tmp_path = "/tmp/wpa_supplicant.conf.tmp"
+
+        try:
+            if os.path.exists(config_path):
+                logging.info("Backing up existing config...")
+                run(["sudo", "cp", config_path, backup_path], check=True)
+            else:
+                logging.warning("No existing wpa_supplicant.conf found. Creating a new one.")
+
             network_block = '\nnetwork={\n'
             network_block += f'    ssid="{ssid}"\n'
             if password:
@@ -108,34 +113,34 @@ class WifiConnectScreen(Screen):
                 network_block += '    key_mgmt=NONE\n'
             network_block += '}\n'
 
-            logging.debug(f"Generated network block:\n{network_block}")
+            if os.path.exists(config_path):
+                with open(config_path, "r") as f:
+                    content = f.read()
+            else:
+                # Add default config header if missing
+                content = 'ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev\n'
+                content += 'update_config=1\n'
+                content += 'country=US\n'
 
-            # Read existing config
-            with open("/etc/wpa_supplicant/wpa_supplicant.conf", "r") as f:
-                content = f.read()
-            logging.debug("✅ Read current wpa_supplicant.conf")
-
+            # Append or merge
             if "network={" in content:
                 new_content = content.strip() + network_block
             else:
                 new_content = content + network_block
 
-            # Write to temp
-            with open("/tmp/wpa_supplicant.conf.tmp", "w") as f:
+            with open(tmp_path, "w") as f:
                 f.write(new_content)
-            logging.debug("✅ Temp config written")
 
-            # Replace
-            run(["sudo", "mv", "/tmp/wpa_supplicant.conf.tmp",
-                "/etc/wpa_supplicant/wpa_supplicant.conf"], check=True)
-            logging.debug("✅ Config moved into place")
+            run(["sudo", "mv", tmp_path, config_path], check=True)
+            logging.info("✅ wpa_supplicant.conf updated successfully.")
 
+        except CalledProcessError as e:
+            logging.error(f"❌ System command failed: {e}")
+            raise
         except Exception as e:
-            logging.exception("❌ update_wifi_config failed")
-            raise e  # Re-raise so the outer try block can still show status_label
-
-
-
+            logging.error("❌ update_wifi_config failed")
+            logging.exception(e)
+            raise
  
     def go_back(self, instance):
         if self.manager:
