@@ -141,7 +141,7 @@ class WifiNetworkScreen(Screen):
             password = input_field.text.strip()
             if password:
                 popup.dismiss()
-                self.connect_to_network(ssid, password)
+                threading.Thread(target=self.connect_to_network, args=(ssid, password)).start()
             else:
                 self.show_popup("Input Error", "Password cannot be empty")
 
@@ -158,13 +158,16 @@ class WifiNetworkScreen(Screen):
         self.text_input_ref = input_field
 
     def connect_to_network(self, ssid, password):
-        try:
+        self.show_popup("Connecting", f"Connecting to {ssid}...")
+        def do_connect():
+            try:
             subprocess.run(["nmcli", "connection", "delete", "SenificWiFi"], check=False)
             subprocess.run(["nmcli", "device", "wifi", "connect", ssid, "password", password, "name", "SenificWiFi"], check=True)
             self.current_ssid = ssid
             Clock.schedule_once(lambda dt: self.refresh_networks(0))
+                Clock.schedule_once(lambda dt: self.show_popup("Connected", f"Connected to {ssid}"))
         except subprocess.CalledProcessError as e:
-            Clock.schedule_once(lambda dt, msg=str(e): self.show_popup("Connection Failed", msg))
+                Clock.schedule_once(lambda dt, msg=str(e): self.show_popup("Connection Failed", msg))
 
     def confirm_disconnect(self, ssid):
         content = BoxLayout(orientation='vertical')
@@ -193,5 +196,14 @@ class WifiNetworkScreen(Screen):
         popup.open()
 
     def show_popup(self, title, message):
-        popup = Popup(title=title, content=Label(text=message), size_hint=(0.8, 0.4))
+        content = BoxLayout(orientation='vertical', padding=10, spacing=10)
+        label = Label(text=message, size_hint_y=None, height=100, text_size=(400, None), halign='center', valign='middle')
+        label.bind(size=lambda instance, value: setattr(instance, 'text_size', value))
+        close_btn = Button(text='Close', size_hint_y=None, height=40)
+
+        popup = Popup(title=title, content=content, size_hint=(0.9, None), height=200, auto_dismiss=True)
+        close_btn.bind(on_press=popup.dismiss)
+
+        content.add_widget(label)
+        content.add_widget(close_btn)
         popup.open()
