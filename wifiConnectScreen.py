@@ -95,48 +95,48 @@ class WifiConnectScreen(Screen):
             logging.exception(e)
 
     def update_wifi_config(self, ssid, password):
+        import logging
+        import os
+
         config_path = "/etc/wpa_supplicant/wpa_supplicant.conf"
-        backup_path = "/etc/wpa_supplicant/wpa_supplicant.conf.bak"
         tmp_path = "/tmp/wpa_supplicant.conf.tmp"
+        backup_path = "/etc/wpa_supplicant/wpa_supplicant.conf.bak"
 
+        # Read current config
         try:
-            if os.path.exists(config_path):
-                logging.info("Backing up existing config...")
-                run(["sudo", "cp", config_path, backup_path], check=True)
-            else:
-                logging.warning("No existing wpa_supplicant.conf found. Creating a new one.")
+            with open(config_path, "r") as f:
+                content = f.read()
+        except FileNotFoundError:
+            logging.warning("No existing wpa_supplicant.conf found. Creating a new one.")
+            content = "ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev\nupdate_config=1\ncountry=US\n"
 
-            network_block = '\nnetwork={\n'
-            network_block += f'    ssid="{ssid}"\n'
-            if password:
-                network_block += f'    psk="{password}"\n'
-            else:
-                network_block += '    key_mgmt=NONE\n'
-            network_block += '}\n'
+        # Check if the SSID already exists (case-insensitive)
+        if f'ssid="{ssid}"' in content:
+            logging.info(f"SSID '{ssid}' already exists in config. Skipping add.")
+            return
 
-            if os.path.exists(config_path):
-                with open(config_path, "r") as f:
-                    content = f.read()
-            else:
-                content = 'ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev\n'
-                content += 'update_config=1\n'
-                content += 'country=US\n'
+        logging.info("Backing up existing config...")
+        run(["sudo", "cp", config_path, backup_path], check=False)
 
-            new_content = content.strip() + network_block
+        # Append new network block
+        network_block = f'''
+    network={{
+        ssid="{ssid}"
+        psk="{password}"\n}}''' if password else f'''
+    network={{
+        ssid="{ssid}"
+        key_mgmt=NONE\n}}'''
 
-            with open(tmp_path, "w") as f:
-                f.write(new_content)
+        new_content = content.strip() + "\n" + network_block + "\n"
 
-            run(["sudo", "mv", tmp_path, config_path], check=True)
-            logging.info("✅ wpa_supplicant.conf updated successfully.")
+        with open(tmp_path, "w") as f:
+            f.write(new_content)
 
-        except CalledProcessError as e:
-            logging.error(f"❌ System command failed: {e}")
-            raise
-        except Exception as e:
-            logging.error("❌ update_wifi_config failed")
-            logging.exception(e)
-            raise
+        # Replace the original file with the updated one
+        run(["sudo", "mv", tmp_path, config_path], check=True)
+
+        logging.info("✅ wpa_supplicant.conf updated successfully.")
+
 
     def go_back(self, instance):
         if self.manager:
