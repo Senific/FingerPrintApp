@@ -110,3 +110,8 @@ class IdleScreen(Screen):
     def set_battery_percentage(self, value):
         """Call this method from outside when battery level is known"""
         self.battery_percentage = max(0, min(100, int(value)))
+
+    
+    def on_touch_down(self, touch):
+        self.manager.current = "menu"
+        return True
