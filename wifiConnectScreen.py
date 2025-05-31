@@ -76,6 +76,7 @@ class WifiConnectScreen(Screen):
             return
 
         try:
+            logging.info("Updating Wifi Config")
             self.status_label.text = "Updating Wi-Fi config..."
             self.update_wifi_config(ssid, password)
             self.status_label.text = "Wi-Fi config updated. Restarting interface..."
