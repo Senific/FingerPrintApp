@@ -87,7 +87,8 @@ class WifiConnectScreen(Screen):
             self.status_label.text = f"Failed to restart Wi-Fi: {e}"
         except Exception as e:
             self.status_label.text = f"Error: {e}"
-            logging.debug('Wifi Connect Exception : '  + e)
+            logging.error(f"Wifi Connect Exception: {e}")
+            
 
     def update_wifi_config(self, ssid, password):
         run(["sudo", "cp", "/etc/wpa_supplicant/wpa_supplicant.conf", "/etc/wpa_supplicant/wpa_supplicant.conf.bak"], check=True)

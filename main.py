@@ -1,6 +1,26 @@
 import os
 import sys
 
+
+import logging
+from datetime import datetime
+
+# Path to admin's home directory
+log_dir = log_dir = os.path.expanduser("~")
+log_file = os.path.join(log_dir, "app_debug.log")
+
+# Ensure directory exists (it should already exist, but just in case)
+os.makedirs(log_dir, exist_ok=True)
+
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    filename=log_file,
+    filemode="a"
+)
+ 
+
 from kivy.config import Config
 # Detect if running on Raspberry Pi
 is_raspberry = False
@@ -26,23 +46,6 @@ else:
 Config.set('modules', 'touchring', '')
 
 
-import logging
-from datetime import datetime
-
-# Path to admin's home directory
-log_dir = os.path.expanduser("~admin")
-log_file = os.path.join(log_dir, "app_debug.log")
-
-# Ensure directory exists (it should already exist, but just in case)
-os.makedirs(log_dir, exist_ok=True)
-
-# Configure logging
-logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    filename=log_file,
-    filemode="a"
-)
 
 from kivy.core.window import Window
 from idleScreen import IdleScreen
@@ -66,9 +69,8 @@ from kivy.app import App
  
 
 class FingerprintApp(App):
-    def build(self):
+    def build(self): 
         sm = ScreenManager(transition=FadeTransition())
- 
         sm.add_widget(IdleScreen(name='main'))
         sm.add_widget(MenuScreen(name='menu'))
         sm.add_widget(WifiConnectScreen(name='wifi'))
