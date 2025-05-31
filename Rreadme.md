@@ -17,3 +17,10 @@ chmod +x setup_kiosk.sh
 
 chmod +x enable_autologin.sh
 ./enable_autologin.sh
+
+#########
+#Virtual Keyboard
+
+source ~/senific_env/bin/activate
+pip install kivy_garden
+#garden install xkeyboard

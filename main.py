@@ -5,7 +5,7 @@ import sys
 import logging
 from datetime import datetime
 
-from WifiListScreen import WifiListScreen
+from wifiNetworkScreen import WifiNetworkScreen
 
 # Path to admin's home directory
 log_dir = log_dir = os.path.expanduser("~")
@@ -75,7 +75,7 @@ class FingerprintApp(App):
         sm = ScreenManager(transition=FadeTransition())
         sm.add_widget(IdleScreen(name='main'))
         sm.add_widget(MenuScreen(name='menu'))
-        sm.add_widget(WifiListScreen(name='wifi-list'))
+        sm.add_widget(WifiNetworkScreen(name='wifi-list'))
         sm.add_widget(WifiConnectScreen(name='wifi'))
 
         return sm

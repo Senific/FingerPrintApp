@@ -1,3 +1,4 @@
 kivy
 requests
 pyserial
+kivy_garden
