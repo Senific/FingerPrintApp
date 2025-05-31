@@ -3,6 +3,7 @@ from kivy.uix.label import Label
 
 import os
 os.environ["KIVY_BCM_DISPMANX_ID"] = "1"
+os.environ["KIVY_WINDOW"] = "egl_rpi"
 
 class TestApp(App):
     def build(self):
