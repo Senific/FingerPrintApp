@@ -9,7 +9,7 @@ from kivy.clock import Clock
 import subprocess
 import logging
 
-class WifiListScreen(Screen):
+class WifiManagerScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.networks = {}
