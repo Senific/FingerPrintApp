@@ -1,16 +1,8 @@
 # import logging
 # logging.basicConfig(filename='app.log', level=logging.DEBUG)
 import os
-os.environ["KIVY_NO_CONSOLELOG"] = "1"
-os.environ["KIVY_NO_FILELOG"] = "1"
-os.environ["KIVY_BCM_DISPMANX_ID"] = "2"
-os.environ["KIVY_METRICS_DENSITY"] = "2"
-os.environ["KIVY_CLOCK"] = "default"
-os.environ["KIVY_VIDEO"] = "ffpyplayer"
-os.environ["KIVY_TEXT"] = "pil"
-os.environ["SDL_FBDEV"] = "/dev/fb1"
-os.environ["KIVY_WINDOW"] = "sdl"
-os.environ["SDL_FBDEV"] = "/dev/fb1" 
+os.environ["KIVY_BCM_DISPMANX_ID"] = "1"
+
 
 
 
