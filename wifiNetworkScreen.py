@@ -8,7 +8,6 @@ from kivy.clock import Clock
 from kivy.uix.textinput import TextInput
 from kivy.uix.floatlayout import FloatLayout
 from kivy.core.window import Window
-from kivy.uix.vkeyboard import VKeyboard
 import subprocess
 import threading
 import sys
@@ -119,26 +118,22 @@ class WifiNetworkScreen(Screen):
             self.prompt_password(ssid)
 
     def prompt_password(self, ssid):
-        content = FloatLayout()
+        content = BoxLayout(orientation='vertical', padding=[20, 20, 20, 20], spacing=10)
 
         input_field = TextInput(
-            hint_text='Enter password',
+            hint_text='Password',
             password=True,
             multiline=False,
-            size_hint=(0.9, None),
-            height=40,
-            pos_hint={'center_x': 0.5, 'top': 0.95},
-            focus=True
+            size_hint=(1, None),
+            height=40
         )
         content.add_widget(input_field)
 
-        keyboard = VKeyboard(
-            layout='qwerty',
-            size_hint=(1, 0.5),
-            pos_hint={'x': 0, 'y': 0}
+        connect_button = Button(
+            text='Connect',
+            size_hint=(1, None),
+            height=40
         )
-        keyboard.target = input_field
-        content.add_widget(keyboard)
 
         def on_connect(instance):
             password = input_field.text.strip()
@@ -146,17 +141,19 @@ class WifiNetworkScreen(Screen):
                 popup.dismiss()
                 self.connect_to_network(ssid, password)
 
-        connect_button = Button(
-            text='Connect',
-            size_hint=(0.5, None),
-            height=40,
-            pos_hint={'center_x': 0.5, 'y': 0.52}
-        )
         connect_button.bind(on_press=on_connect)
         content.add_widget(connect_button)
 
-        popup = Popup(title=f"Connect to {ssid}", content=content, size_hint=(0.95, 0.8))
+        popup = Popup(
+            title=f"Connect to {ssid}",
+            content=content,
+            size_hint=(0.9, None),
+            height=200,
+            auto_dismiss=True
+        )
         popup.open()
+
+        Clock.schedule_once(lambda dt: setattr(input_field, 'focus', True), 0.1)
         self.text_input_ref = input_field
 
     def connect_to_network(self, ssid, password):
