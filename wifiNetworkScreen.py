@@ -160,8 +160,10 @@ class WifiNetworkScreen(Screen):
         try:
             subprocess.run(["nmcli", "connection", "delete", "SenificWiFi"], check=False)
             subprocess.run(["nmcli", "device", "wifi", "connect", ssid, "password", password, "name", "SenificWiFi"], check=True)
+            # Trigger UI refresh after successful connection
+            Clock.schedule_once(lambda dt: self.refresh_networks(0))
         except subprocess.CalledProcessError as e:
-            self.show_popup("Connection Failed", str(e))
+            Clock.schedule_once(lambda dt: self.show_popup("Connection Failed", str(e)))
 
     def confirm_disconnect(self, ssid):
         content = BoxLayout(orientation='vertical')
@@ -176,8 +178,10 @@ class WifiNetworkScreen(Screen):
                     if device == "wlan0":
                         subprocess.run(["nmcli", "connection", "down", name], check=False)
                         break
+                # Trigger UI refresh after disconnect
+                Clock.schedule_once(lambda dt: self.refresh_networks(0))
             except Exception as e:
-                self.show_popup("Error", str(e))
+                Clock.schedule_once(lambda dt: self.show_popup("Error", str(e)))
             popup.dismiss()
 
         btn = Button(text="Disconnect", size_hint_y=None, height=40)
