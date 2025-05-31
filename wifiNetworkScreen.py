@@ -159,15 +159,18 @@ class WifiNetworkScreen(Screen):
 
     def connect_to_network(self, ssid, password):
         self.show_popup("Connecting", f"Connecting to {ssid}...")
+
         def do_connect():
             try:
-            subprocess.run(["nmcli", "connection", "delete", "SenificWiFi"], check=False)
-            subprocess.run(["nmcli", "device", "wifi", "connect", ssid, "password", password, "name", "SenificWiFi"], check=True)
-            self.current_ssid = ssid
-            Clock.schedule_once(lambda dt: self.refresh_networks(0))
+                subprocess.run(["nmcli", "connection", "delete", "SenificWiFi"], check=False)
+                subprocess.run(["nmcli", "device", "wifi", "connect", ssid, "password", password, "name", "SenificWiFi"], check=True)
+                self.current_ssid = ssid
+                Clock.schedule_once(lambda dt: self.refresh_networks(0))
                 Clock.schedule_once(lambda dt: self.show_popup("Connected", f"Connected to {ssid}"))
-        except subprocess.CalledProcessError as e:
+            except subprocess.CalledProcessError as e:
                 Clock.schedule_once(lambda dt, msg=str(e): self.show_popup("Connection Failed", msg))
+
+        threading.Thread(target=do_connect).start()
 
     def confirm_disconnect(self, ssid):
         content = BoxLayout(orientation='vertical')
