@@ -2,58 +2,30 @@
 
 set -e
 
-echo "🔧 Step 1: Setup virtual environment outside repo..."
-ENV_PATH="/home/admin/senific_env"
-APP_PATH="/home/admin/FingerPrintApp"
+# --- Configuration ---
+PROJECT_DIR="/home/admin/FingerPrintApp"
+VENV_PATH="/home/admin/senific_env"
 PYTHON_BIN="/usr/bin/python3"
 
-if [ ! -d "$ENV_PATH" ]; then
-    $PYTHON_BIN -m venv "$ENV_PATH"
-    echo "✅ Virtual environment created at $ENV_PATH"
+echo "🔧 Step 1: Creating virtual environment outside project..."
+if [ -d "$VENV_PATH" ]; then
+    echo "⚠️ Virtual environment already exists at $VENV_PATH"
 else
-    echo "⚠️ Virtual environment already exists at $ENV_PATH"
+    $PYTHON_BIN -m venv "$VENV_PATH"
+    echo "✅ Virtual environment created at $VENV_PATH"
 fi
 
-echo "🔧 Step 2: Activate environment and install requirements..."
-source "$ENV_PATH/bin/activate"
+echo "🔧 Step 2: Activating environment and installing requirements..."
+source "$VENV_PATH/bin/activate"
 
-pip install --upgrade pip
-pip install kivy pillow
+if [ -f "$PROJECT_DIR/requirements.txt" ]; then
+    pip install --upgrade pip
+    pip install -r "$PROJECT_DIR/requirements.txt"
+    echo "✅ Requirements installed from $PROJECT_DIR/requirements.txt"
+else
+    echo "❌ No requirements.txt found at $PROJECT_DIR"
+    exit 1
+fi
 
 deactivate
-echo "✅ Dependencies installed."
-
-echo "🔧 Step 3: Create systemd service..."
-
-SERVICE_FILE="/etc/systemd/system/fingerprint-kiosk.service"
-
-sudo tee "$SERVICE_FILE" > /dev/null <<EOL
-[Unit]
-Description=Start FingerPrintApp in kiosk mode
-After=network.target
-
-[Service]
-User=admin
-Environment=PYTHONUNBUFFERED=1
-Environment=KIVY_BCM_DISPMANX_ID=1
-WorkingDirectory=/home/admin/FingerPrintApp
-ExecStart=/home/admin/senific_env/bin/python /home/admin/FingerPrintApp/main.py
-Restart=always
-RestartSec=5
-StandardOutput=append:/var/log/fingerprint_app.log
-StandardError=append:/var/log/fingerprint_app.log
-
-[Install]
-WantedBy=multi-user.target
-EOL
-
-echo "✅ Service created at $SERVICE_FILE"
-
-echo "🔧 Step 4: Enable and start the service..."
-sudo systemctl daemon-reexec
-sudo systemctl daemon-reload
-sudo systemctl enable fingerprint-kiosk.service
-sudo systemctl restart fingerprint-kiosk.service
-
-echo "✅ App will now auto-start on reboot and auto-restart if it crashes."
-echo "📄 Logs will be available at /var/log/fingerprint_app.log"
+echo "🎉 Environment setup complete!"
