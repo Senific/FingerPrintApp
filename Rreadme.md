@@ -9,10 +9,8 @@ cd FingerPrintApp
 chmod +x install_display.sh
 ./install_display.sh
 
-
 chmod +x setup.sh
 ./setup.sh
-
 
 chmod +x setup_kiosk.sh
 ./setup_kiosk.sh
