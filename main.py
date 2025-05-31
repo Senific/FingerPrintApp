@@ -2,16 +2,7 @@
 # logging.basicConfig(filename='app.log', level=logging.DEBUG)
 import os
 os.environ["KIVY_BCM_DISPMANX_ID"] = "1"
-
-
-
-
-from kivy.config import Config
-# Config.set('graphics', 'fullscreen', '1')  # or 'auto'
-# Config.set('graphics', 'show_cursor', '0')
-# Config.set('graphics', 'resizable', '0')
-# Config.set('graphics', 'width', '320')    # Adjust to your 3.5" screen size
-# Config.set('graphics', 'height', '480')
+ 
 
 from kivy.core.window import Window
 from idleScreen import IdleScreen
