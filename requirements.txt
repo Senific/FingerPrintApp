@@ -4,6 +4,5 @@ pyserial
 kivy_garden
 aiosqlite
 aiohttp
-httpx[http2]>=0.27.0
-pip install python-dateutil
+httpx[http2]>=0.27.0 
 cryptography
