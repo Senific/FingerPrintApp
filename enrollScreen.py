@@ -78,7 +78,7 @@ class EnrollScreen(Screen):
 
     def go_back(self, instance):
         if self.manager:
-            self.manager.current = 'menu'
+            self.manager.current = 'list'
 
     def set_employee_details(self, image_path, name, code, enrolled):
         self.employee_image.source = image_path

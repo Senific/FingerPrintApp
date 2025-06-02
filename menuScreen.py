@@ -33,8 +33,7 @@ class MenuScreen(Screen):
         self.add_widget(background)
 
         button_grid = GridLayout(cols=2, spacing=10, size_hint=(1, 0.8))
-
-        self.btn_enroll = Button(text="Enroll")
+ 
         self.btn_wifi = Button(text="WiFi")
         self.btn_update = Button(text="Update")
         self.btn_restart = Button(text="Restart")
@@ -46,8 +45,7 @@ class MenuScreen(Screen):
 
         self.status_label = Label(text="", size_hint=(1, 0.1))
 
-        # Bind actions
-        self.btn_enroll.bind(on_release=self.on_enroll)
+        # Bind actions 
         self.btn_wifi.bind(on_release=self.on_wifi)
         self.btn_update.bind(on_release=self.on_update)
         self.btn_restart.bind(on_release=self.on_restart)
@@ -57,8 +55,7 @@ class MenuScreen(Screen):
         self.btn_list.bind(on_release=self.on_list)  # ✅ New Binding
         self.btn_back.bind(on_release=self.go_back)
 
-        # Add buttons in desired order
-        button_grid.add_widget(self.btn_enroll)
+        # Add buttons in desired order 
         button_grid.add_widget(self.btn_wifi)
         button_grid.add_widget(self.btn_update)
         button_grid.add_widget(self.btn_restart)
@@ -75,9 +72,7 @@ class MenuScreen(Screen):
 
     def on_pre_enter(self):
         self.status_label.text = "Version 1.4"
-
-    def on_enroll(self, instance):
-        self.manager.current = 'enroll'
+ 
 
     def on_wifi(self, instance):
         self.manager.current = 'wifi'
