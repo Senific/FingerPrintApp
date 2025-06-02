@@ -1,0 +1,48 @@
+# Python bytecode and cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Compiled C extensions
+*.so
+
+# Virtual environments
+venv/
+env/
+kivy_venv/
+
+# Environment & build
+.env
+.build/
+dist/
+*.egg-info/
+
+# IDE & editor settings
+.idea/
+.vscode/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Runtime files
+RuntimeResources/
+
+# Log files
+*.log
+
+# Test / temp / backup files
+*.tmp
+*.swp
+*.bak
+*.old
+
+# Script temp files
+*.sh~
+
+# Deployment or external generated
+DeploymentFiles/
+
+# Git merge/diff conflict artifacts
+*.orig
+*.rej

@@ -1,84 +1,121 @@
+import logging
+
+# Suppress overly verbose httpx/httpcore debug logs
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+
+import asyncio
 import os
 import sys
+import threading
+from kivy.config import Config
+from kivy.core.window import Window
+from kivy.uix.screenmanager import ScreenManager, FadeTransition
+from kivy.app import App
 
-
-import logging
-from datetime import datetime
-
+from idleScreen import IdleScreen
+from menuScreen import MenuScreen
 from wifiNetworkScreen import WifiNetworkScreen
+from enrollScreen import EnrollScreen
+from logScreen import LogScreen
+from settingsScreen import SettingsScreen
+from employeeListScreen import EmployeeListScreen
 
-# Path to admin's home directory
-log_dir = log_dir = os.path.expanduser("~")
-log_file = os.path.join(log_dir, "app_debug.log")
+from employee_sync import EmployeeSync, EmployeeDatabase, SETTINGS_FILE
 
-# Ensure directory exists (it should already exist, but just in case)
-os.makedirs(log_dir, exist_ok=True)
-
-# Configure logging
+# Setup minimal file logging
+log_file = os.path.expanduser("~/app_debug.log")
+os.makedirs(os.path.dirname(log_file), exist_ok=True)
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
     filename=log_file,
     filemode="a"
 )
- 
 
-from kivy.config import Config
-# Detect if running on Raspberry Pi
+# Detect Raspberry Pi
 is_raspberry = False
-
 if sys.platform == "linux":
     try:
         with open("/proc/cpuinfo", "r") as f:
-            cpuinfo = f.read()
-        is_raspberry = "Raspberry Pi" in cpuinfo or "BCM" in cpuinfo
+            is_raspberry = "Raspberry Pi" in f.read()
     except:
         pass
 
-# Input setup
-Config.set('input', 'mouse', 'mouse,multitouch_on_demand')  # No multitouch emulation
-
-# Cursor visibility based on device
-if is_raspberry:
-    Config.set('graphics', 'show_cursor', '0')  # Hide cursor on Raspberry Pi
-else:
-    Config.set('graphics', 'show_cursor', '1')  # Show cursor elsewhere
-
-# Disable the touch cross
+# Configure Kivy
+Config.set('input', 'mouse', 'mouse,multitouch_on_demand')
+Config.set('graphics', 'show_cursor', '0' if is_raspberry else '1')
 Config.set('modules', 'touchring', '')
 
-
-
-from kivy.core.window import Window
-from idleScreen import IdleScreen
-from menuScreen import MenuScreen
-from wifiConnectScreen import WifiConnectScreen
-
-# Desired window size
-win_width, win_height = 480, 320
-Window.size = (win_width, win_height)
+# Set window size
+Window.size = (480, 320)
 Window.fullscreen = False
-
-# Get the screen width and height (physical monitor resolution)
-screen_width, screen_height = Window.system_size  # Kivy 2.1+ provides system_size
-
-# Calculate top-left coordinates to center window
-Window.left = (screen_width - win_width) // 2
-Window.top = (screen_height - win_height) // 2
-
-from kivy.uix.screenmanager import ScreenManager, FadeTransition
-from kivy.app import App
- 
+Window.left = (Window.system_size[0] - 480) // 2
+Window.top = (Window.system_size[1] - 320) // 2
 
 class FingerprintApp(App):
-    def build(self): 
+    def build(self):
+        self.employee_to_enroll = None
         sm = ScreenManager(transition=FadeTransition())
         sm.add_widget(IdleScreen(name='main'))
         sm.add_widget(MenuScreen(name='menu'))
-        sm.add_widget(WifiNetworkScreen(name='wifi-list'))
-        sm.add_widget(WifiConnectScreen(name='wifi'))
+        sm.add_widget(WifiNetworkScreen(name='wifi'))
+        sm.add_widget(EnrollScreen(name='enroll'))
+        sm.add_widget(LogScreen(name='logs'))
+        sm.add_widget(SettingsScreen(name='settings'))
+        sm.add_widget(EmployeeListScreen(name='list'))
+
+        if not os.path.exists(SETTINGS_FILE):
+            sm.current = 'settings'  # 👈 force settings screen
+        else:
+            sm.current = 'main'  # or any other default
 
         return sm
 
+
+
+class BackgroundSyncThread(threading.Thread):
+    def __init__(self, interval=10):
+        super().__init__(daemon=True)
+        self.interval = interval
+        self.loop = asyncio.new_event_loop()
+
+    def run(self):
+        asyncio.set_event_loop(self.loop)
+        self.loop.run_until_complete(self.sync_loop())
+
+    async def sync_loop(self):
+        from employee_sync import get_api_config  # Safe import inside thread
+
+        db = EmployeeDatabase()
+        await db.initialize()
+
+        try:
+            config = get_api_config()
+        except FileNotFoundError:
+            logging.warning("Settings not found. Skipping sync.")
+            return
+
+        sync = EmployeeSync(db=db)
+
+        try:
+            while True:
+                try:
+                    await sync.sync()
+                except Exception as e:
+                    logging.error(f"Sync error: {e}")
+                await asyncio.sleep(self.interval)
+        finally:
+            await sync.close()
+
 if __name__ == "__main__":
-    FingerprintApp().run()
+    try:
+        sync_thread = BackgroundSyncThread()
+        sync_thread.start()
+    except Exception as e:
+        logging.error(f"Background sync failed to start: {e}")
+
+    try:
+        FingerprintApp().run()
+    except Exception as e:
+        logging.exception("App crashed on startup:")
