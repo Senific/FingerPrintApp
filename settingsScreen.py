@@ -15,6 +15,7 @@ import threading
 import shutil
 
 def get_or_create_fernet():
+    os.makedirs(RUNTIME_DIR, exist_ok=True)
     if not os.path.exists(FERNET_KEY_FILE):
         key = Fernet.generate_key()
         with open(FERNET_KEY_FILE, "wb") as f:
@@ -23,16 +24,16 @@ def get_or_create_fernet():
         with open(FERNET_KEY_FILE, "rb") as f:
             key = f.read()
     return Fernet(key)
-
-fernet = get_or_create_fernet()
-
+ 
 def save_settings(system_code, username, password):
-    encrypted_pw = fernet.encrypt(password.encode()).decode()
+    encrypted_pw = get_or_create_fernet().encrypt(password.encode()).decode()
     data = {
         "system_code": system_code,
         "username": username,
         "password": encrypted_pw
     }
+    
+    os.makedirs(RUNTIME_DIR, exist_ok=True)
     with open(SETTINGS_FILE, "w") as f:
         json.dump(data, f)
 
@@ -40,7 +41,7 @@ def load_settings():
     if os.path.exists(SETTINGS_FILE):
         with open(SETTINGS_FILE, "r") as f:
             data = json.load(f)
-            data["password"] = fernet.decrypt(data["password"].encode()).decode()
+            data["password"] = get_or_create_fernet().decrypt(data["password"].encode()).decode()
             return data
     return get_api_config()
 
@@ -107,8 +108,7 @@ class SettingsScreen(Screen):
         self.feedback_label.text = "Validating credentials..."
         system_code = self.system_code_input.text.strip()
         username = self.username_input.text.strip()
-        password = self.password_input.text.strip()
-
+        password = self.password_input.text.strip() 
         threading.Thread(target=self.validate_and_save, args=(system_code, username, password), daemon=True).start()
 
     def validate_and_save(self, system_code, username, password):
@@ -131,7 +131,8 @@ class SettingsScreen(Screen):
 
     @mainthread
     def process_validation_result(self, response, system_code, username, password):
-        if response.status_code == 200:
+        if response.status_code == 200: 
+            self.perform_reset()
             save_settings(system_code, username, password)
             self.update_feedback(True, "✅ Settings saved successfully, Restarting...")
             threading.Thread(target=lambda: os.system("sudo reboot")).start()
@@ -143,8 +144,7 @@ class SettingsScreen(Screen):
         self.feedback_label.text = message
         self.back_button.disabled = not success
 
-    def perform_reset(self, popup):
-        popup.dismiss()
+    def perform_reset(self):
         try:   
             # Delete specific files if they exist
             if os.path.exists(DB_FILE):
@@ -156,7 +156,8 @@ class SettingsScreen(Screen):
             if os.path.exists(RUNTIME_DIR):
                 shutil.rmtree(RUNTIME_DIR)
  
-            threading.Thread(target=lambda: os.system("sudo reboot")).start()
+            # if reboot:
+            #     threading.Thread(target=lambda: os.system("sudo reboot")).start()
         except Exception as e:
             self.update_status(f"❌ Reset error: {e}")
         
