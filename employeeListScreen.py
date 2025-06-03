@@ -59,8 +59,8 @@ class EmployeeListScreen(Screen):
 
         self.add_widget(main_layout)
 
-    def go_back(self, instance):
-        self.manager.current = 'menu'
+    def go_back(self, instance): 
+        self.manager.current = "menu" 
 
     def on_enter(self):
         Thread(target=self.populate_employees).start()
@@ -170,5 +170,6 @@ class EmployeeListScreen(Screen):
 
     def goto_enroll(self, emp):
         app = App.get_running_app()
-        app.employee_to_enroll = emp
+        app.employee_to_enroll = emp 
+        app.previous_screen = "employees"  
         self.manager.current = "enroll"

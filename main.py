@@ -20,7 +20,8 @@ from enrollScreen import EnrollScreen
 from logScreen import LogScreen
 from settingsScreen import SettingsScreen
 from employeeListScreen import EmployeeListScreen
-
+from MarkAttendanceScreen  import MarkAttendanceScreen
+from AttendancesScreen import AttendancesScreen
 from employee_sync import EmployeeSync, EmployeeDatabase, SETTINGS_FILE
 
 # Setup minimal file logging
@@ -63,8 +64,9 @@ class FingerprintApp(App):
         sm.add_widget(EnrollScreen(name='enroll'))
         sm.add_widget(LogScreen(name='logs'))
         sm.add_widget(SettingsScreen(name='settings'))
-        sm.add_widget(EmployeeListScreen(name='list'))
-
+        sm.add_widget(EmployeeListScreen(name='employees'))
+        sm.add_widget(MarkAttendanceScreen(name='mark'))
+        sm.add_widget(AttendancesScreen(name='attendances'))
         if not os.path.exists(SETTINGS_FILE):
             sm.current = 'settings'  # 👈 force settings screen
         else:
@@ -75,9 +77,8 @@ class FingerprintApp(App):
 
 
 class BackgroundSyncThread(threading.Thread):
-    def __init__(self, interval=10):
+    def __init__(self):
         super().__init__(daemon=True)
-        self.interval = interval
         self.loop = asyncio.new_event_loop()
 
     def run(self):
@@ -104,7 +105,8 @@ class BackgroundSyncThread(threading.Thread):
                     await sync.sync()
                 except Exception as e:
                     logging.error(f"Sync error: {e}")
-                await asyncio.sleep(self.interval)
+                await asyncio.sleep(EmployeeSync.sync_interval_ms / 1000)
+                print(f"Warning Threed Sleepd for {EmployeeSync.sync_interval_ms} ms"  )
         finally:
             await sync.close()
 

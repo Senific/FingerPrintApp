@@ -5,6 +5,7 @@ import aiosqlite
 import json
 from urllib.parse import quote
 from cryptography.fernet import Fernet
+from datetime import datetime, timedelta
 
 # 🔧 Constants
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -15,6 +16,7 @@ SETTINGS_FILE = os.path.join(RUNTIME_DIR, "settings.txt")
 FERNET_KEY_FILE = os.path.join(RUNTIME_DIR, "fernet.key") 
 DB_FILE = os.path.join(RUNTIME_DIR, "employees.db")
 LAST_SYNC_FILE = os.path.join(RUNTIME_DIR, "last_sync.txt")
+SECONDARY_SETTINGS_FILE = os.path.join(RUNTIME_DIR, "SecondarySettings.txt")
 
 os.makedirs(RUNTIME_DIR, exist_ok=True)
 os.makedirs(IMAGES_DIR, exist_ok=True)
@@ -41,6 +43,7 @@ def get_api_config():
     return data
 
 
+
 class Employee:
     def __init__(self, ID, Name, Code, Description):
         self.ID = ID
@@ -63,6 +66,18 @@ class EmployeeDatabase:
                     Name TEXT,
                     Code TEXT,
                     Description TEXT
+                )
+            ''')
+
+            await db.execute('''
+                CREATE TABLE IF NOT EXISTS Attendances (
+                    ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                    Employee_ID INTEGER,
+                    Code TEXT,
+                    Name TEXT,
+                    Time TEXT,
+                    State TEXT,
+                    Deleted BIT
                 )
             ''')
             await db.commit()
@@ -97,6 +112,8 @@ class EmployeeSync:
         self.token = None
         self.client = httpx.AsyncClient()
 
+    sync_interval_ms = 1000  # Default value accessible globally
+
     @staticmethod
     async def get_token(username, password, system_code, api_url):
         url = f"{api_url}/token"
@@ -128,6 +145,34 @@ class EmployeeSync:
 
     async def close(self):
         await self.client.aclose()
+
+    def save_secondary_settings(self, interval_ms: int):
+        try:
+            with open(SECONDARY_SETTINGS_FILE, "w") as f:
+                f.write(str(interval_ms))
+            print(f"💾 Saved sync interval: {interval_ms} ms to SecondarySettings.txt")
+        except Exception as e:
+            print(f"❌ Failed to save sync interval: {e}")
+
+    def load_secondary_settings(self) -> int:
+        if os.path.exists(SECONDARY_SETTINGS_FILE):
+            try:
+                with open(SECONDARY_SETTINGS_FILE, "r") as f:
+                    return int(f.read().strip())
+            except:
+                pass
+        return 1000  # Default fallback
+
+    async def get_system_info(self):
+        url = f"{self.api_url}/api/Values/GetSystemInfo?code={quote(self.system_code)}" 
+        try:
+            response = await self.client.get(url, timeout=10)
+            response.raise_for_status() 
+            return response.json()
+        except Exception as e:
+            print(f"❌ Failed to get system info: {e}")
+            return None
+
 
     async def get_server_time(self):
         url = f"{self.api_url}/api/values/GetDateTime"
@@ -170,10 +215,92 @@ class EmployeeSync:
         if os.path.exists(path):
             os.remove(path)
 
+
+    async def upload_attendance(self, employee_id: int, state: str, time_str: str):
+        """
+        Uploads a single attendance record to the ASP.NET API.
+        """
+        if not self.token:
+            await self.authenticate()
+
+        url = f"{self.api_url}/api/Payroll/AddOrUpdateAttendance"
+        headers = {
+            "Authorization": f"Bearer {self.token}",
+            "SystemCode": self.system_code,
+            "Content-Type": "application/json"
+        }
+
+        payload = {
+            "Employee_ID": employee_id,
+            "Time": time_str,
+            "State": state
+        }
+
+        try:
+            response = await self.client.post(url, headers=headers, json=payload)
+            response.raise_for_status()
+
+            print(f"✅ Attendance uploaded for Employee {employee_id}")
+            return response.json()  # Do NOT await
+        except httpx.HTTPStatusError as e:
+            print(f"❌ API Error ({e.response.status_code}): {e.response.text}")
+            raise
+        except Exception as e:
+            print(f"❌ Request failed: {e}")
+            raise
+
+    async def upload_attendances(self):
+        print("📤 Uploading attendances...")
+
+        async with aiosqlite.connect(self.db.db_path) as db:
+            async with db.execute("""
+                SELECT ID, Employee_ID, Code, Name, Time, State
+                FROM Attendances
+                WHERE Deleted IS NOT 1
+            """) as cursor:
+                records = await cursor.fetchall()
+
+            if not records:
+                print("✅ No attendances to upload.")
+                return
+
+            for row in records:
+                local_id, employee_id, code, name, time_str, state = row
+                try:
+                    await self.upload_attendance(employee_id, state, time_str)
+
+                    # 🔁 Mark the record as deleted
+                    await db.execute("UPDATE Attendances SET Deleted = 1 WHERE ID = ?", (local_id,))
+                    await db.commit()
+
+                    print(f"✅ Uploaded and marked as deleted attendance ID {local_id}")
+                except Exception as e:
+                    print(f"❌ Error while uploading attendance ID {local_id}: {e}")
+
+            # 🧹 Delete records older than 2 months where Deleted = 1
+            two_months_ago = (datetime.now() - timedelta(days=60)).strftime("%Y-%m-%d %H:%M:%S")
+            await db.execute("""
+                DELETE FROM Attendances
+                WHERE Deleted = 1 AND datetime(Time) < datetime(?)
+            """, (two_months_ago,))
+            await db.commit()
+
+            print("🧹 Old deleted attendance records cleaned up (older than 2 months).")
+
+        
     async def sync(self):
         print(f"🔄 Starting sync... System Code: {self.system_code}") 
         if not self.token:
             await self.authenticate()
+ 
+        system_info = await self.get_system_info() 
+        if not system_info:
+            print("❌ Unable to fetch system info. Aborting sync.")
+            return
+
+        EmployeeSync.sync_interval_ms = system_info.get("FingerMachineSyncInterval", 1000)
+        print(f"Sync Interval: {EmployeeSync.sync_interval_ms}ms")
+        self.save_secondary_settings(EmployeeSync.sync_interval_ms)
 
         last_sync = self.get_last_sync_time()
         print(f"🕒 Last sync: {last_sync}")
@@ -215,5 +342,7 @@ class EmployeeSync:
             print(f"🔄 {idx}/{len(data)}")
             await asyncio.sleep(0.01)
 
+        # 🔼 Upload and clear local attendances
+        await self.upload_attendances()
         self.save_last_sync_time(new_sync_time)
         print(f"✅ Sync completed. Last sync updated to: {new_sync_time}")

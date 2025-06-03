@@ -60,12 +60,15 @@ class EnrollScreen(Screen):
 
         footer_layout = BoxLayout(orientation='horizontal', spacing=10, size_hint=(1, 0.15))
         self.enroll_button = Button(text="Start Enrollment")
+        self.mark_button = Button(text="Go To Mark")
         self.back_button = Button(text="Back", size_hint=(0.3, 1))
 
         self.enroll_button.bind(on_release=self.start_enrollment)
+        self.mark_button.bind(on_release=self.mark);
         self.back_button.bind(on_release=self.go_back)
 
         footer_layout.add_widget(self.enroll_button)
+        footer_layout.add_widget(self.mark_button)
         footer_layout.add_widget(self.back_button)
 
         root_layout.add_widget(content_layout)
@@ -76,14 +79,23 @@ class EnrollScreen(Screen):
     def start_enrollment(self, instance):
         print("Enrollment started...")
 
+    def mark(self, instance):
+        app = App.get_running_app()
+        app.employee_to_enroll =  App.get_running_app().employee_to_enroll
+        app.markAttendancePrevious_screen = "enroll"  
+        self.manager.current = "mark"
+
     def go_back(self, instance):
+        app = App.get_running_app()
         if self.manager:
-            self.manager.current = 'list'
+            target = getattr(app, 'previous_screen', 'main')  # default to 'main'
+            self.manager.current = target
+
 
     def set_employee_details(self, image_path, name, code, enrolled):
         self.employee_image.source = image_path
-        self.name_label.text = f"Name: {name}"
-        self.code_label.text = f"Code: {code}"
+        self.name_label.text = f"{name}"
+        self.code_label.text = f"{code}"
         self.status_label.text = "✅ Enrolled" if enrolled else "❌ Not Enrolled"
 
     def check_enrollment_status(self, emp_id: int) -> bool:
