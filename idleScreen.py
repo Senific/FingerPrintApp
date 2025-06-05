@@ -152,7 +152,7 @@ class IdleScreen(Screen):
 
         fullyDelta = charged_voltage - shutdown_voltage
         delta = real_voltage - shutdown_voltage
-        percentage =   (delta / fullyDelta) * 100
+        percentage =   int((delta / fullyDelta) * 100)
         
         if percentage < 20:  
             self.batterylow_label.opacity = 1
