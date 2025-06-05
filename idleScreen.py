@@ -1,3 +1,5 @@
+import os
+import threading
 
 from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition, FloatLayout
 from kivy.app import App
@@ -67,6 +69,22 @@ class IdleScreen(Screen):
         self.resolution_label.bind(size=self._update_clock_label)
         self.add_widget(self.resolution_label)
 
+        self.batterylow_label = Label(
+            text="Low Battery, Warning!!!",
+            font_size='30sp',
+            halign='center',
+            valign='middle',
+            color= (1, 0, 0, 1),
+            size_hint=(None, None),
+            size=(480, 40),
+            pos_hint={"center_x": 0.5, "center_y": 0.25} 
+        )
+        self.batterylow_label.opacity = 0
+        #self.batterylow_label.bind(size=self._update_clock_label)
+        self.add_widget(self.batterylow_label)
+
+        
+
         company_label = Label(
             text="SENIFIC (PVT) LTD - WWW.SENIFIC.COM / 076-4092662",
             font_size='12sp',
@@ -128,7 +146,23 @@ class IdleScreen(Screen):
     def get_battery_percentage(self): 
         #Using Ohoms Law, Caused used resistor to create a voltage Divotor to lower the Input for ADS1115 A0 
         real_voltage = adc_channel.voltage * (110 / 10)
-        return F"{real_voltage:.3f} V" 
+        charged_voltage = 12.4
+        #warning_voltage = 9.6
+        shutdown_voltage = 9.2
+
+        fullyDelta = charged_voltage - shutdown_voltage
+        delta = real_voltage - shutdown_voltage
+        percentage =   delta / fullyDelta
+        
+        if percentage < 20:  
+            self.batterylow_label.opacity = 1
+        else:
+            self.batterylow_label.opacity = 0
+
+        if percentage <= 0:
+            threading.Thread(target=lambda: os.system("sudo poweroff")).start()
+
+        return F"{percentage}%" 
     
     def on_touch_down(self, touch):
         self.manager.current = "menu"
