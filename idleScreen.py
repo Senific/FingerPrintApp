@@ -18,10 +18,10 @@ if is_raspberry_pi:
     import busio
     from adafruit_ads1x15.ads1115 import ADS1115
     from adafruit_ads1x15.analog_in import AnalogIn
-    from adafruit_ads1x15.ads1x15 import ADS1x15 
+    from adafruit_ads1x15.ads1x15 import ADS1X15   
     i2c = busio.I2C(board.SCL, board.SDA)
     ads = ADS1115(i2c)
-    adc_channel = AnalogIn(ads, ADS1x15.P0)
+    adc_channel = AnalogIn(ads, ADS1X15.P0  )
 else:
     print("Running on Windows: skipping ADS1115 setup.")
     class DummyChannel:
