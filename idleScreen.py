@@ -126,7 +126,7 @@ class IdleScreen(Screen):
     def update_status_info(self, dt):
         wifi = self.get_wifi_strength_percent()
         battery = self.get_battery_percentage()
-        new_text = f"WiFi: {wifi}%  B: {battery}%"
+        new_text = f"WiFi: {wifi}%  B: {battery}"
         self.status_label.text = new_text
 
           
