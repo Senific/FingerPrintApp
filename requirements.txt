@@ -8,4 +8,3 @@ httpx[http2]>=0.27.0
 cryptography
 adafruit-circuitpython-ads1x15
 RPi.GPIO
---upgrade adafruit-circuitpython-ads1x15
