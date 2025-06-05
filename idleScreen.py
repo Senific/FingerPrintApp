@@ -126,8 +126,9 @@ class IdleScreen(Screen):
         return 0
 
     def get_battery_percentage(self): 
-        return F"{adc_channel.voltage:.3f} V"
-        #return "0"
+        #Using Ohoms Law, Caused used resistor to create a voltage Divotor to lower the Input for ADS1115 A0 
+        real_voltage = adc_channel.voltage * (110 / 10)
+        return F"{real_voltage:.3f} V" 
     
     def on_touch_down(self, touch):
         self.manager.current = "menu"
