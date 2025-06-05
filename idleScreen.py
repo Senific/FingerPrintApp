@@ -6,6 +6,27 @@ from kivy.uix.label import Label
 from kivy.clock import Clock
 from datetime import datetime
 import subprocess  # Add this import if not already
+from adafruit_ads1x15.ads1115 import ADS1115
+from adafruit_ads1x15.analog_in import AnalogIn 
+import platform
+import sys
+
+is_raspberry_pi = platform.system() != "Windows"
+
+if is_raspberry_pi:
+    import board
+    import busio
+    from adafruit_ads1x15.ads1115 import ADS1115
+    from adafruit_ads1x15.analog_in import AnalogIn
+
+    i2c = busio.I2C(board.SCL, board.SDA)
+    ads = ADS1115(i2c)
+    adc_channel = AnalogIn(ads, ADS1115.P0)
+else:
+    print("Running on Windows: skipping ADS1115 setup.")
+    class DummyChannel:
+        voltage = 0.0
+    adc_channel = DummyChannel()
 
 class IdleScreen(Screen):
     def __init__(self, **kwargs):
@@ -77,9 +98,7 @@ class IdleScreen(Screen):
 
         Clock.schedule_interval(self.update_clock, 1)
         Clock.schedule_interval(self.update_status_info, 5)
-
-        # Placeholder for battery percentage (you can update this value later)
-        self.battery_percentage = 0
+ 
 
     def update_clock(self, dt):
         self.clock_label.text = datetime.now().strftime("%H:%M:%S")
@@ -89,7 +108,7 @@ class IdleScreen(Screen):
 
     def update_status_info(self, dt):
         wifi = self.get_wifi_strength_percent()
-        battery = self.battery_percentage
+        battery = self.get_battery_percentage()
         new_text = f"WiFi: {wifi}%  B: {battery}%"
         self.status_label.text = new_text
 
@@ -107,9 +126,8 @@ class IdleScreen(Screen):
             pass
         return 0
 
-    def set_battery_percentage(self, value):
-        """Call this method from outside when battery level is known"""
-        self.battery_percentage = max(0, min(100, int(value)))
+    def get_battery_percentage(self): 
+        return F"{adc_channel.voltage:.3f} V"
 
     
     def on_touch_down(self, touch):

@@ -106,7 +106,7 @@ class BackgroundSyncThread(threading.Thread):
                 except Exception as e:
                     logging.error(f"Sync error: {e}")
                 await asyncio.sleep(EmployeeSync.sync_interval_ms / 1000)
-                print(f"Warning Threed Sleepd for {EmployeeSync.sync_interval_ms} ms"  )
+                print(f"Warning Threed Slept for {EmployeeSync.sync_interval_ms} ms"  )
         finally:
             await sync.close()
 
