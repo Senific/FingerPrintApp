@@ -12,6 +12,9 @@ chmod +x install_display.sh
 chmod +x setup.sh
 ./setup.sh
 
+sudo apt update
+sudo apt install python3-dev
+
 chmod +x setup_kiosk.sh
 ./setup_kiosk.sh
 
@@ -23,4 +26,4 @@ chmod +x enable_autologin.sh
 
 source ~/senific_env/bin/activate
 pip install kivy_garden
-#garden install xkeyboard
+#garden install xkeyboard 

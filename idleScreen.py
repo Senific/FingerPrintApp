@@ -5,28 +5,28 @@ from kivy.uix.image import Image
 from kivy.uix.label import Label 
 from kivy.clock import Clock
 from datetime import datetime
-import subprocess  # Add this import if not already
-# from adafruit_ads1x15.ads1115 import ADS1115
-# from adafruit_ads1x15.analog_in import AnalogIn 
-# import platform
-# import sys
+import subprocess  
+ 
+from adafruit_ads1x15.ads1115 import ADS1115
+from adafruit_ads1x15.analog_in import AnalogIn 
+import platform
 
-# is_raspberry_pi = platform.system() != "Windows"
+is_raspberry_pi = platform.system() != "Windows"
 
-# if is_raspberry_pi:
-#     import board
-#     import busio
-#     from adafruit_ads1x15.ads1115 import ADS1115
-#     from adafruit_ads1x15.analog_in import AnalogIn
+if is_raspberry_pi:
+    import board
+    import busio
+    from adafruit_ads1x15.ads1115 import ADS1115
+    from adafruit_ads1x15.analog_in import AnalogIn
 
-#     i2c = busio.I2C(board.SCL, board.SDA)
-#     ads = ADS1115(i2c)
-#     adc_channel = AnalogIn(ads, ADS1115.P0)
-# else:
-#     print("Running on Windows: skipping ADS1115 setup.")
-#     class DummyChannel:
-#         voltage = 0.0
-#     adc_channel = DummyChannel()
+    i2c = busio.I2C(board.SCL, board.SDA)
+    ads = ADS1115(i2c)
+    adc_channel = AnalogIn(ads, ADS1115.P0)
+else:
+    print("Running on Windows: skipping ADS1115 setup.")
+    class DummyChannel:
+        voltage = 0.0
+    adc_channel = DummyChannel()
 
 class IdleScreen(Screen):
     def __init__(self, **kwargs):
@@ -127,8 +127,8 @@ class IdleScreen(Screen):
         return 0
 
     def get_battery_percentage(self): 
-        #return F"{adc_channel.voltage:.3f} V"
-        return "0"
+        return F"{adc_channel.voltage:.3f} V"
+        #return "0"
     
     def on_touch_down(self, touch):
         self.manager.current = "menu"
