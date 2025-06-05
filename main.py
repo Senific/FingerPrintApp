@@ -4,6 +4,17 @@ import logging
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
 
+
+# Setup minimal file logging
+log_file = os.path.expanduser("~/app_debug.log")
+os.makedirs(os.path.dirname(log_file), exist_ok=True)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    filename=log_file,
+    filemode="a"
+)
+
 import asyncio
 import os
 import sys
@@ -24,15 +35,6 @@ from MarkAttendanceScreen  import MarkAttendanceScreen
 from AttendancesScreen import AttendancesScreen
 from employee_sync import EmployeeSync, EmployeeDatabase, SETTINGS_FILE
 
-# Setup minimal file logging
-log_file = os.path.expanduser("~/app_debug.log")
-os.makedirs(os.path.dirname(log_file), exist_ok=True)
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    filename=log_file,
-    filemode="a"
-)
 
 # Detect Raspberry Pi
 is_raspberry = False
