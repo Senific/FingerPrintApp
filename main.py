@@ -1,3 +1,4 @@
+import os
 import logging
 
 # Suppress overly verbose httpx/httpcore debug logs
@@ -16,7 +17,6 @@ logging.basicConfig(
 )
 
 import asyncio
-import os
 import sys
 import threading
 from kivy.config import Config
