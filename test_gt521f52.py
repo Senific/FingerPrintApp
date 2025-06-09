@@ -28,11 +28,17 @@ if response:
 else:
     print("❌ No response received.")
 
+get_device_info_command = b'\x55\xAA\x01\x00\x00\x00\x00\x00\x1F\x00\x20\x20'
+ser.write(get_device_info_command)
+response = ser.read(24)  # Device info packet is longer
+print("Device Info Response:", response.hex())
+
+
 # LED On Command
-led_on_command_packet = b'\x55\xAA\x01\x00\x01\x00\x00\x00\x12\x00\x13\x13'
-ser.write(led_on_command_packet)
-response = ser.read(12)
-print("LED ON Response:", response.hex())
+# led_on_command_packet = b'\x55\xAA\x01\x00\x01\x00\x00\x00\x12\x00\x13\x13'
+# ser.write(led_on_command_packet)
+# response = ser.read(12)
+# print("LED ON Response:", response.hex())
 
 
 # Close serial port
