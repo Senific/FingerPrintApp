@@ -28,5 +28,12 @@ if response:
 else:
     print("❌ No response received.")
 
+# LED On Command
+led_on_command_packet = b'\x55\xAA\x01\x00\x01\x00\x00\x00\x12\x00\x13\x13'
+ser.write(led_on_command_packet)
+response = ser.read(12)
+print("LED ON Response:", response.hex())
+
+
 # Close serial port
 ser.close()
