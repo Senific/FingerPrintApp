@@ -1,4 +1,4 @@
-from gt521f52_helper import GT521F52Helper
+from test_gt521f52_full import GT521F52Helper
 import time
 
 gt = GT521F52Helper(port="/dev/serial0", baudrate=115200 )

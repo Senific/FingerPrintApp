@@ -54,3 +54,35 @@ class GT521F52Helper:
     def close(self):
         self.ser.close()
         print("[GT521F52] Serial port closed.")
+
+
+# === Full Test Sequence ===
+if __name__ == "__main__":
+    # Try 9600 first, if no success, try 115200
+    BAUDRATE = 9600
+    gt = GT521F52Helper(port="/dev/serial0", baudrate=BAUDRATE)
+
+    # Step 1: Open
+    gt.open()
+
+    # Step 2: Try SetSerialParam (send twice as per datasheet suggestion)
+    gt.set_serial_param()
+    time.sleep(0.2)
+    gt.set_serial_param()
+    time.sleep(0.2)
+
+    # Step 3: Open again
+    gt.open()
+
+    # Step 4: Get Device Info
+    gt.get_device_info()
+
+    # Step 5: LED ON
+    gt.led_on()
+    time.sleep(3)
+
+    # Step 6: LED OFF
+    gt.led_off()
+
+    # Close serial port
+    gt.close()
