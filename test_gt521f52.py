@@ -28,6 +28,13 @@ if response:
 else:
     print("❌ No response received.")
 
+set_serial_param_command = b'\x55\xAA\x01\x00\x00\x00\x00\x00\x15\x00\x16\x16'
+ser.write(set_serial_param_command)
+time.sleep(0.2)
+response = ser.read(12)
+print("Set Serial Param Response:", response.hex())
+time.sleep(0.5)
+
 get_device_info_command = b'\x55\xAA\x01\x00\x00\x00\x00\x00\x1F\x00\x20\x20'
 ser.write(get_device_info_command)
 time.sleep(0.2)  # small delay allows module to process
