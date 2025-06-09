@@ -1,31 +1,8 @@
-from test_gt521f52_full import GT521F52Helper
-import time
+import serial
 
-gt = GT521F52Helper(port="/dev/serial0", baudrate=115200 )
+ser = serial.Serial("/dev/serial0", baudrate=9600, timeout=1)
 
-# Step 1: Open
-gt.open()
+ser.write(b'\x55\xAA...')  # Example command to fingerprint module
 
-# Step 2: Set Serial Param (can repeat if needed)
-gt.set_serial_param()
-time.sleep(0.2)
-gt.set_serial_param()
-time.sleep(0.2)
-
-# Step 3: Open again
-gt.open()
-
-# Step 4: Get Device Info
-gt.get_device_info()
-
-# Step 5: LED ON test
-gt.led_on()
-
-# Wait to see LED ON
-time.sleep(3)
-
-# Step 6: LED OFF
-gt.led_off()
-
-# Close port
-gt.close()
+response = ser.read(32)
+print(response)
