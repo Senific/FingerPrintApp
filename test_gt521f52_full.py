@@ -8,11 +8,10 @@ class GT521F52Helper:
         print(f"[GT521F52] Serial port opened at {baudrate} baud.")
 
     def _build_packet(self, cmd, param=0):
-        # Build a 12-byte command packet
         header = b'\x55\xAA'
         device_id = b'\x01\x00'
-        param_bytes = struct.pack('<I', param)  # 4 bytes little-endian
-        cmd_bytes = struct.pack('<H', cmd)      # 2 bytes little-endian
+        param_bytes = struct.pack('<I', param)
+        cmd_bytes = struct.pack('<H', cmd)
         checksum = (sum(param_bytes) + sum(cmd_bytes)) & 0xFFFF
         checksum_bytes = struct.pack('<H', checksum)
 
@@ -56,32 +55,32 @@ class GT521F52Helper:
         print("[GT521F52] Serial port closed.")
 
 
-# === Full Test Sequence ===
+# === Full Test Sequence with Repeated Attempts ===
 if __name__ == "__main__":
-    # Try 9600 first, if no success, try 115200
+    # Try 9600 first — this is the standard default for many modules
     BAUDRATE = 9600
     gt = GT521F52Helper(port="/dev/serial0", baudrate=BAUDRATE)
 
     # Step 1: Open
     gt.open()
 
-    # Step 2: Try SetSerialParam (send twice as per datasheet suggestion)
-    gt.set_serial_param()
-    time.sleep(0.2)
-    gt.set_serial_param()
-    time.sleep(0.2)
+    # Step 2: Attempt SetSerialParam repeatedly
+    for i in range(5):  # Retry 5 times
+        print(f"\n--- Attempt {i+1}: SetSerialParam ---")
+        gt.set_serial_param()
+        time.sleep(0.3)
+        print(f"--- Attempt {i+1}: Open again ---")
+        gt.open()
+        time.sleep(0.3)
 
-    # Step 3: Open again
-    gt.open()
-
-    # Step 4: Get Device Info
+    # Step 3: Get Device Info
     gt.get_device_info()
 
-    # Step 5: LED ON
+    # Step 4: LED ON
     gt.led_on()
     time.sleep(3)
 
-    # Step 6: LED OFF
+    # Step 5: LED OFF
     gt.led_off()
 
     # Close serial port
