@@ -30,6 +30,7 @@ else:
 
 get_device_info_command = b'\x55\xAA\x01\x00\x00\x00\x00\x00\x1F\x00\x20\x20'
 ser.write(get_device_info_command)
+time.sleep(0.2)  # small delay allows module to process
 response = ser.read(24)  # Device info packet is longer
 print("Device Info Response:", response.hex())
 
