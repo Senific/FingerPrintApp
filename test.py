@@ -170,6 +170,28 @@ if __name__ == "__main__":
         print(f"USB Internal Check failed with error: {e}. This is normal on some firmwares.")
         print("Waiting 500ms instead...")
         time.sleep(0.5)
+        # Reset the device:
+        print("Resetting USB device to clear phase error...")
+        usb.util.dispose_resources(dev)
+        dev = usb.core.find(idVendor=VENDOR_ID, idProduct=PRODUCT_ID)
+        if dev is None:
+            raise ValueError("Device not found after reset!")
+        if dev.is_kernel_driver_active(0):
+            print("Detaching kernel driver after reset...")
+            dev.detach_kernel_driver(0)
+        dev.set_configuration()
+        cfg = dev.get_active_configuration()
+        intf = cfg[(0, 0)]
+        ep_out = usb.util.find_descriptor(
+            intf,
+            custom_match=lambda e: usb.util.endpoint_direction(e.bEndpointAddress) == usb.util.ENDPOINT_OUT
+        )
+        ep_in = usb.util.find_descriptor(
+            intf,
+            custom_match=lambda e: usb.util.endpoint_direction(e.bEndpointAddress) == usb.util.ENDPOINT_IN
+        )
+        print("USB device reset complete. Waiting 200ms...")
+        time.sleep(0.2)
 
     # CMD_CMOS_LED ON
     send_gt521f52_command(ep_out, ep_in, 0x12, 0x00000001)
