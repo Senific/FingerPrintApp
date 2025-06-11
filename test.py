@@ -4,7 +4,7 @@ import struct
 import time
 
 # Find device
-dev = usb.core.find(idVendor=0x0x1D6B, idProduct=0x0002)  # <- replace with your correct VID/PID if needed
+dev = usb.core.find(idVendor=0x2009  , idProduct=0x7638  )  # <- replace with your correct VID/PID if needed
 if dev is None:
     dev = usb.core.find(idVendor=0x1C7A, idProduct=0x0570)  # GT-521F52 default VID/PID
     if dev is None:
