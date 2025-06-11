@@ -163,8 +163,13 @@ if __name__ == "__main__":
     # CMD_OPEN
     send_gt521f52_command(ep_out, ep_in, 0x01, 0x00000001)
 
-    # USB Internal Check → required after CMD_OPEN
-    send_gt521f52_command(ep_out, ep_in, 0x03, 0x00000001)
+    # USB Internal Check → some firmwares may reject this → catch the error
+    try:
+        send_gt521f52_command(ep_out, ep_in, 0x03, 0x00000001)
+    except usb.core.USBError as e:
+        print(f"USB Internal Check failed with error: {e}. This is normal on some firmwares.")
+        print("Waiting 500ms instead...")
+        time.sleep(0.5)
 
     # CMD_CMOS_LED ON
     send_gt521f52_command(ep_out, ep_in, 0x12, 0x00000001)
