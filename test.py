@@ -53,7 +53,7 @@ def compute_checksum(dev_id, cmd, param):
     return chksum & 0xFFFF
 
 # Send command and receive response
-def send_gt521f52_command(ep_out, ep_in, cmd, param):
+def send_gt521f52_command(ep_out, ep_in, cmd, param, expect_data_len=0):
     print(f"\nSending CMD: 0x{cmd:04X}, Param: 0x{param:08X}")
 
     # Step 1: SEND phase → EF FE
@@ -145,59 +145,54 @@ def send_gt521f52_command(ep_out, ep_in, cmd, param):
     else:
         print(f"CSW Status: Unknown ({csw_status})")
 
-    # Safe delay
-    if cmd == 0x01:
-        print("Waiting 200ms after CMD_OPEN...")
-        time.sleep(0.2)
-    elif cmd == 0x03:
-        print("Waiting 50ms after USB Internal Check...")
-        time.sleep(0.05)
-    else:
-        print("Waiting 50ms before next command...")
-        time.sleep(0.05)
+    # If extra data is expected (e.g. devinfo, image), read it
+    if expect_data_len > 0:
+        print(f"Reading {expect_data_len} bytes of data...")
+        data = bytearray()
+        while len(data) < expect_data_len:
+            chunk = ep_in.read(min(512, expect_data_len - len(data)), timeout=2000)
+            data.extend(chunk)
+        print(f"Read {len(data)} bytes.")
+        return resp_ack, resp_param, bytes(data)
+
+    return resp_ack, resp_param, None
 
 # Main test loop
 if __name__ == "__main__":
     dev, ep_out, ep_in = init_device()
 
     # CMD_OPEN
-    send_gt521f52_command(ep_out, ep_in, 0x01, 0x00000001)
-
-    # USB Internal Check → some firmwares may reject this → catch the error
-    try:
-        send_gt521f52_command(ep_out, ep_in, 0x03, 0x00000001)
-    except usb.core.USBError as e:
-        print(f"USB Internal Check failed with error: {e}. This is normal on some firmwares.")
-        print("Waiting 500ms instead...")
-        time.sleep(0.5)
-        # Reset the device:
-        print("Resetting USB device to clear phase error...")
-        usb.util.dispose_resources(dev)
-        dev = usb.core.find(idVendor=VENDOR_ID, idProduct=PRODUCT_ID)
-        if dev is None:
-            raise ValueError("Device not found after reset!")
-        if dev.is_kernel_driver_active(0):
-            print("Detaching kernel driver after reset...")
-            dev.detach_kernel_driver(0)
-        dev.set_configuration()
-        cfg = dev.get_active_configuration()
-        intf = cfg[(0, 0)]
-        ep_out = usb.util.find_descriptor(
-            intf,
-            custom_match=lambda e: usb.util.endpoint_direction(e.bEndpointAddress) == usb.util.ENDPOINT_OUT
-        )
-        ep_in = usb.util.find_descriptor(
-            intf,
-            custom_match=lambda e: usb.util.endpoint_direction(e.bEndpointAddress) == usb.util.ENDPOINT_IN
-        )
-        print("USB device reset complete. Waiting 200ms...")
-        time.sleep(0.2)
+    ack, param, devinfo = send_gt521f52_command(ep_out, ep_in, 0x01, 0x00000001, expect_data_len=24)
+    print(f"Device Info: {' '.join(f'{b:02X}' for b in devinfo)}")
 
     # CMD_CMOS_LED ON
     send_gt521f52_command(ep_out, ep_in, 0x12, 0x00000001)
 
-    # Wait 1 second with LED ON
-    time.sleep(1)
+    # Wait for finger press
+    print("\nWaiting for finger...")
+    while True:
+        ack, param, _ = send_gt521f52_command(ep_out, ep_in, 0x26, 0x00000000)
+        if param == 0:  # 0 = finger pressed
+            print("Finger detected!")
+            break
+        else:
+            print("No finger. Retrying...")
+            time.sleep(0.5)
+
+    # CMD_CAPTURE
+    send_gt521f52_command(ep_out, ep_in, 0x60, 0x00000001)
+
+    # CMD_GET_IMAGE → capture size depends on your sensor (usually 202x258 = 52016 bytes)
+    IMAGE_SIZE = 202 * 258
+    _, _, image_data = send_gt521f52_command(ep_out, ep_in, 0x62, 0x00000000, expect_data_len=IMAGE_SIZE)
+
+    # Save image as .pgm (portable graymap) → viewable in image viewers
+    print("Saving fingerprint image as 'fingerprint.pgm'...")
+    with open("fingerprint.pgm", "wb") as f:
+        f.write(f"P5\n202 258\n255\n".encode())
+        f.write(image_data)
+
+    print("Image saved.")
 
     # CMD_CMOS_LED OFF
     send_gt521f52_command(ep_out, ep_in, 0x12, 0x00000000)
