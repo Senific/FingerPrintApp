@@ -149,10 +149,17 @@ def send_gt521f52_command(ep_out, ep_in, cmd, param, expect_data_len=0):
     if expect_data_len > 0:
         print(f"Reading {expect_data_len} bytes of data...")
         data = bytearray()
-        while len(data) < expect_data_len:
-            chunk = ep_in.read(min(512, expect_data_len - len(data)), timeout=2000)
-            data.extend(chunk)
-        print(f"Read {len(data)} bytes.")
+        try:
+            while len(data) < expect_data_len:
+                chunk = ep_in.read(min(512, expect_data_len - len(data)), timeout=2000)
+                data.extend(chunk)
+            print(f"Read {len(data)} bytes.")
+        except usb.core.USBError as e:
+            if e.errno == 32:
+                print("PIPE ERROR while reading extra data → firmware sent no data. Proceeding safely.")
+                return resp_ack, resp_param, None
+            else:
+                raise
         return resp_ack, resp_param, bytes(data)
 
     return resp_ack, resp_param, None
@@ -163,7 +170,10 @@ if __name__ == "__main__":
 
     # CMD_OPEN
     ack, param, devinfo = send_gt521f52_command(ep_out, ep_in, 0x01, 0x00000001, expect_data_len=24)
-    print(f"Device Info: {' '.join(f'{b:02X}' for b in devinfo)}")
+    if devinfo:
+        print(f"Device Info: {' '.join(f'{b:02X}' for b in devinfo)}")
+    else:
+        print("No devinfo returned → firmware likely does not send it. Continuing safely.")
 
     # CMD_CMOS_LED ON
     send_gt521f52_command(ep_out, ep_in, 0x12, 0x00000001)
