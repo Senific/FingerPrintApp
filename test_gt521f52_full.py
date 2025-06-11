@@ -6,6 +6,7 @@ def print_hex(data, label):
 
 # Commands
 CMD_OPEN      = b'\x55\xAA\x01\x00\x00\x00\x00\x00\x01\x00\x01\x01'
+CMD_GET_DEVICE_INFO = b'\x55\xAA\x01\x00\x00\x00\x00\x00\x30\x00\x00\x31'
 CMD_CMOS_LED_ON  = b'\x55\xAA\x01\x00\x00\x00\x00\x00\x12\x00\x01\x12'
 CMD_CMOS_LED_OFF = b'\x55\xAA\x01\x00\x00\x00\x00\x00\x12\x00\x00\x11'
 
@@ -19,7 +20,7 @@ def send_cmd(ser, cmd, label):
     ser.write(cmd)
     ser.flush()
     time.sleep(0.1)
-    response = ser.read(12)
+    response = ser.read(24)  # For GET_DEVICE_INFO we expect longer reply (up to 24 bytes)
     if response:
         print_hex(response, f"Response to {label}")
     else:
@@ -33,6 +34,9 @@ print(f"[INFO] Serial port {SERIAL_PORT} opened at {INITIAL_BAUD} baud.\n")
 
 send_cmd(ser, CMD_OPEN, "CMD_OPEN")
 time.sleep(0.5)  # longer delay after OPEN
+
+send_cmd(ser, CMD_GET_DEVICE_INFO, "GET_DEVICE_INFO")
+time.sleep(0.5)
 
 send_cmd(ser, CMD_CMOS_LED_ON, "CMOS_LED ON at 9600")
 time.sleep(0.5)
@@ -48,6 +52,9 @@ print(f"[INFO] Serial port {SERIAL_PORT} opened at {INITIAL_BAUD} baud.\n")
 
 send_cmd(ser, CMD_OPEN, "CMD_OPEN")
 time.sleep(0.5)  # longer delay after OPEN
+
+send_cmd(ser, CMD_GET_DEVICE_INFO, "GET_DEVICE_INFO")
+time.sleep(0.5)
 
 print(f"[INFO] Switching serial baud rate to {OPERATING_BAUD} baud...")
 ser.close()
