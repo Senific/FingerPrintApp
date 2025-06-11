@@ -145,13 +145,14 @@ def send_gt521f52_command(ep_out, ep_in, cmd, param):
     else:
         print(f"CSW Status: Unknown ({csw_status})")
 
-    # REQUIRED safe delay:
+    # Safe delay
     if cmd == 0x01:
-        # Special delay after CMD_OPEN → required ~200ms
         print("Waiting 200ms after CMD_OPEN...")
         time.sleep(0.2)
+    elif cmd == 0x03:
+        print("Waiting 50ms after USB Internal Check...")
+        time.sleep(0.05)
     else:
-        # Normal delay between other commands → 50ms
         print("Waiting 50ms before next command...")
         time.sleep(0.05)
 
@@ -161,6 +162,9 @@ if __name__ == "__main__":
 
     # CMD_OPEN
     send_gt521f52_command(ep_out, ep_in, 0x01, 0x00000001)
+
+    # USB Internal Check → required after CMD_OPEN
+    send_gt521f52_command(ep_out, ep_in, 0x03, 0x00000001)
 
     # CMD_CMOS_LED ON
     send_gt521f52_command(ep_out, ep_in, 0x12, 0x00000001)
