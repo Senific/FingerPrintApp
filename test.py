@@ -45,8 +45,8 @@ print(f"Bulk IN endpoint: 0x{ep_in.bEndpointAddress:02x}")
 # Build CBW (Command Block Wrapper)
 CBW_SIGNATURE = 0x43425355  # 'USBC'
 CBW_TAG = random.randint(1, 0xFFFFFFFF)
-CBW_DATA_TRANSFER_LENGTH = 0  # No data phase for this simple test
-CBW_FLAGS = 0x80  # IN transfer (bit 7) — let's match sg_raw EF FF command
+CBW_DATA_TRANSFER_LENGTH = 512  # we will read 512 bytes (Demo Tool also reads 512 for EF FF)
+CBW_FLAGS = 0x80  # IN transfer (bit 7)
 CBW_LUN = 0
 CBW_CB_LENGTH = 10  # Length of CDB
 
@@ -71,34 +71,49 @@ print("Sending CBW...")
 ep_out.write(cbw)
 time.sleep(0.1)
 
-# No data phase → go directly to CSW (Command Status Wrapper) → 13 bytes
-print("Reading CSW...")
-csw = ep_in.read(13, timeout=1000)
+# Data phase → Read 512 bytes
+try:
+    print("Reading Data Phase...")
+    data_in = ep_in.read(512, timeout=1000)
 
-# Parse CSW
-csw_signature = struct.unpack('<I', csw[0:4])[0]
-csw_tag = struct.unpack('<I', csw[4:8])[0]
-csw_data_residue = struct.unpack('<I', csw[8:12])[0]
-csw_status = csw[12]
+    print(f"Data ({len(data_in)} bytes):")
+    print(' '.join(f'{b:02X}' for b in data_in))
 
-# Display CSW
-print(f"CSW Signature: {hex(csw_signature)}")
-print(f"CSW Tag: {csw_tag}")
-print(f"CSW Data Residue: {csw_data_residue}")
-print(f"CSW Status: {csw_status}")
+except usb.core.USBError as e:
+    print(f"USB Error during Data Phase: {e}")
 
-# Check CSW status
-if csw_signature != 0x53425355:
-    print("Invalid CSW Signature!")
-elif csw_tag != CBW_TAG:
-    print("CSW Tag does not match CBW Tag!")
-elif csw_status == 0x00:
-    print("Command Passed.")
-elif csw_status == 0x01:
-    print("Command Failed.")
-elif csw_status == 0x02:
-    print("Phase Error.")
-else:
-    print(f"Unknown CSW status: {csw_status}")
+# Now read CSW (Command Status Wrapper) → 13 bytes
+try:
+    print("Reading CSW...")
+    csw = ep_in.read(13, timeout=1000)
+
+    # Parse CSW
+    csw_signature = struct.unpack('<I', csw[0:4])[0]
+    csw_tag = struct.unpack('<I', csw[4:8])[0]
+    csw_data_residue = struct.unpack('<I', csw[8:12])[0]
+    csw_status = csw[12]
+
+    # Display CSW
+    print(f"CSW Signature: {hex(csw_signature)}")
+    print(f"CSW Tag: {csw_tag}")
+    print(f"CSW Data Residue: {csw_data_residue}")
+    print(f"CSW Status: {csw_status}")
+
+    # Check CSW status
+    if csw_signature != 0x53425355:
+        print("Invalid CSW Signature!")
+    elif csw_tag != CBW_TAG:
+        print("CSW Tag does not match CBW Tag!")
+    elif csw_status == 0x00:
+        print("Command Passed.")
+    elif csw_status == 0x01:
+        print("Command Failed.")
+    elif csw_status == 0x02:
+        print("Phase Error.")
+    else:
+        print(f"Unknown CSW status: {csw_status}")
+
+except usb.core.USBError as e:
+    print(f"USB Error during CSW read: {e}")
 
 print("Done.")
