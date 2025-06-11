@@ -1,59 +1,66 @@
-import serial
-import time
+import usb.core
+import usb.util
 
-# === Setup ===
-ser = serial.Serial("/dev/serial0", baudrate=9600, timeout=1)
-print("[GT521F52] Serial port opened at 9600 baud.")
+# Replace these with your device VID and PID from lsusb
+VENDOR_ID = 0x0c2e
+PRODUCT_ID = 0x0b05
 
-# === Helper function ===
-def send_packet(packet, response_length=12, delay=0.2, label=""):
-    ser.write(packet)
-    time.sleep(delay)
-    response = ser.read(response_length)
-    print(f"[GT521F52] {label} Response: {response.hex()}")
-    return response
+# Find the device
+dev = usb.core.find(idVendor=VENDOR_ID, idProduct=PRODUCT_ID)
 
-# === Command Packets ===
+if dev is None:
+    raise ValueError('Device not found')
 
-# Open Command
-open_command = b'\x55\xAA\x01\x00\x00\x00\x00\x00\x01\x00\x01\x01'
+print("Device found!")
 
-# SetSerialParam Command
-set_serial_param_command = b'\x55\xAA\x01\x00\x00\x00\x00\x00\x15\x00\x16\x16'
+# Detach kernel driver if needed (very common for USB SCSI devices)
+if dev.is_kernel_driver_active(0):
+    dev.detach_kernel_driver(0)
 
-# GetDeviceInfo Command (response = 24 bytes)
-get_device_info_command = b'\x55\xAA\x01\x00\x00\x00\x00\x00\x1F\x00\x20\x20'
+# Set configuration
+dev.set_configuration()
 
-# LED ON Command (param = 1)
-led_on_command = b'\x55\xAA\x01\x00\x01\x00\x00\x00\x12\x00\x13\x13'
+# Claim interface (usually interface 0)
+cfg = dev.get_active_configuration()
+intf = cfg[(0, 0)]
 
-# LED OFF Command (param = 0)
-led_off_command = b'\x55\xAA\x01\x00\x00\x00\x00\x00\x12\x00\x12\x12'
+# Find Bulk OUT and Bulk IN endpoints
+ep_out = usb.util.find_descriptor(
+    intf,
+    custom_match=lambda e: usb.util.endpoint_direction(e.bEndpointAddress) == usb.util.ENDPOINT_OUT
+)
 
-# === Test Sequence ===
+ep_in = usb.util.find_descriptor(
+    intf,
+    custom_match=lambda e: usb.util.endpoint_direction(e.bEndpointAddress) == usb.util.ENDPOINT_IN
+)
 
-# Step 1: Open
-send_packet(open_command, label="Open Initial")
+print(f"Bulk OUT endpoint: 0x{ep_out.bEndpointAddress:02x}")
+print(f"Bulk IN endpoint: 0x{ep_in.bEndpointAddress:02x}")
 
-# Step 2: SetSerialParam (retry 5 times)
-for i in range(5):
-    print(f"\n--- Attempt {i+1}: SetSerialParam ---")
-    send_packet(set_serial_param_command, label=f"SetSerialParam Attempt {i+1}")
-    time.sleep(0.3)
-    print(f"--- Attempt {i+1}: Open again ---")
-    send_packet(open_command, label=f"Open Attempt {i+1}")
-    time.sleep(0.3)
+# Prepare dummy SCSI command (as your Demo Tool does)
+# CDB: 0xEF, 0xFF → Read
+# Here we send the CDB first, followed by expected data phase
+# Many devices require wrapping this in a SCSI CBW structure — we will try raw first
 
-# Step 3: Get Device Info
-send_packet(get_device_info_command, response_length=24, label="GetDeviceInfo")
+try:
+    # Example command — you will need to refine this later
+    cdb = [0xEF, 0xFF] + [0x00] * 8  # 10-byte CDB like your tool uses
 
-# Step 4: LED ON
-send_packet(led_on_command, label="LED ON")
-time.sleep(3)
+    # Send CDB as control transfer (first experiment — may need bulk later)
+    # This is not always accepted, depends on firmware — for full SCSI we'd use SG_IO ioctl.
+    # But pyusb has no direct SCSI wrapper — we simulate with Bulk transfer:
 
-# Step 5: LED OFF
-send_packet(led_off_command, label="LED OFF")
+    # Send dummy data
+    data_out = bytes([0x00] * 512)  # Send zeroed data — you can send real commands here
 
-# === Done ===
-ser.close()
-print("[GT521F52] Serial port closed.")
+    print("Sending data...")
+    ep_out.write(data_out)
+
+    print("Reading response...")
+    data_in = ep_in.read(512, timeout=1000)
+
+    print(f"Response: {data_in}")
+
+except usb.core.USBError as e:
+    print(f"USB Error: {e}")
