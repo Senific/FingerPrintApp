@@ -118,7 +118,15 @@ def send_gt521f52_command(ep_out, ep_in, cmd, param, expect_data_len=0):
     time.sleep(0.01)
 
     print("Reading Response Packet...")
-    resp = ep_in.read(13, timeout=1000)
+    try:
+        resp = ep_in.read(13, timeout=1000)
+    except usb.core.USBError as e:
+        if e.errno == 32:
+            print("PIPE ERROR on Response Packet → Command not supported in USB mode. Proceeding safely.")
+            return 0, 0, None
+        else:
+            raise
+
     print(f"Response ({len(resp)} bytes):")
     print(' '.join(f'{b:02X}' for b in resp))
 
@@ -135,7 +143,6 @@ def send_gt521f52_command(ep_out, ep_in, cmd, param, expect_data_len=0):
     print(f"Zero: 0x{resp_zero:04X}")
     print(f"CSW Status: {csw_status}")
 
-    # Interpret CSW status
     if csw_status == 0x00:
         print("CSW Status: Command Passed.")
     elif csw_status == 0x01:
@@ -145,7 +152,7 @@ def send_gt521f52_command(ep_out, ep_in, cmd, param, expect_data_len=0):
     else:
         print(f"CSW Status: Unknown ({csw_status})")
 
-    # If extra data is expected (e.g. devinfo, image), read it
+    # If extra data is expected (not used here), handle it
     if expect_data_len > 0:
         print(f"Reading {expect_data_len} bytes of data...")
         data = bytearray()
@@ -164,47 +171,50 @@ def send_gt521f52_command(ep_out, ep_in, cmd, param, expect_data_len=0):
 
     return resp_ack, resp_param, None
 
-# Main test loop
+# Main test
 if __name__ == "__main__":
     dev, ep_out, ep_in = init_device()
 
     # CMD_OPEN
-    ack, param, devinfo = send_gt521f52_command(ep_out, ep_in, 0x01, 0x00000001, expect_data_len=24)
-    if devinfo:
-        print(f"Device Info: {' '.join(f'{b:02X}' for b in devinfo)}")
+    send_gt521f52_command(ep_out, ep_in, 0x01, 0x00000001)
+
+    # CMD_DELETE_ALL (clear existing)
+    send_gt521f52_command(ep_out, ep_in, 0x41, 0x00000000)
+
+    # ENROLL example → enrolling at position 1
+    pos = 1
+    print(f"\n*** ENROLL FINGERPRINT at position {pos} ***")
+
+    send_gt521f52_command(ep_out, ep_in, 0x22, pos)  # ENROLL_START
+
+    print("Place finger for Enroll Step 1...")
+    input("Press Enter after placing finger.")
+    send_gt521f52_command(ep_out, ep_in, 0x23, 1)  # ENROLL_1
+
+    print("Place finger for Enroll Step 2...")
+    input("Press Enter after placing finger.")
+    send_gt521f52_command(ep_out, ep_in, 0x23, 2)  # ENROLL_2
+
+    print("Place finger for Enroll Step 3...")
+    input("Press Enter after placing finger.")
+    send_gt521f52_command(ep_out, ep_in, 0x23, 3)  # ENROLL_3
+
+    print("Enrollment complete.")
+
+    # IDENTIFY
+    print("\n*** IDENTIFY FINGERPRINT ***")
+    print("Place finger to identify...")
+    input("Press Enter after placing finger.")
+
+    ack, param, _ = send_gt521f52_command(ep_out, ep_in, 0x51, 0x00000000)
+    if ack == 0x30:  # ACK_OK
+        print(f"Identify success → ID = {param}")
     else:
-        print("No devinfo returned → firmware likely does not send it. Continuing safely.")
+        print("Identify failed.")
 
-    # CMD_CMOS_LED ON
-    send_gt521f52_command(ep_out, ep_in, 0x12, 0x00000001)
-
-    # Wait for finger press
-    print("\nWaiting for finger...")
-    while True:
-        ack, param, _ = send_gt521f52_command(ep_out, ep_in, 0x26, 0x00000000)
-        if param == 0:  # 0 = finger pressed
-            print("Finger detected!")
-            break
-        else:
-            print("No finger. Retrying...")
-            time.sleep(0.5)
-
-    # CMD_CAPTURE
-    send_gt521f52_command(ep_out, ep_in, 0x60, 0x00000001)
-
-    # CMD_GET_IMAGE → capture size depends on your sensor (usually 202x258 = 52016 bytes)
-    IMAGE_SIZE = 202 * 258
-    _, _, image_data = send_gt521f52_command(ep_out, ep_in, 0x62, 0x00000000, expect_data_len=IMAGE_SIZE)
-
-    # Save image as .pgm (portable graymap) → viewable in image viewers
-    print("Saving fingerprint image as 'fingerprint.pgm'...")
-    with open("fingerprint.pgm", "wb") as f:
-        f.write(f"P5\n202 258\n255\n".encode())
-        f.write(image_data)
-
-    print("Image saved.")
-
-    # CMD_CMOS_LED OFF
-    send_gt521f52_command(ep_out, ep_in, 0x12, 0x00000000)
+    # DELETE enrolled fingerprint
+    print("\n*** DELETE FINGERPRINT ***")
+    send_gt521f52_command(ep_out, ep_in, 0x40, pos)
+    print(f"Deleted fingerprint at position {pos}.")
 
     print("\nDone.")
