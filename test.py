@@ -11,63 +11,62 @@ PRODUCT_ID = 0x7638
 # Device ID used in protocol
 DEVICE_ID = 0x0001
 
-# Find device
-dev = usb.core.find(idVendor=VENDOR_ID, idProduct=PRODUCT_ID)
-if dev is None:
-    raise ValueError('Device not found')
+# Initialize device
+def init_device():
+    dev = usb.core.find(idVendor=VENDOR_ID, idProduct=PRODUCT_ID)
+    if dev is None:
+        raise ValueError('Device not found')
 
-print("Device found!")
+    print("Device found!")
 
-# Detach kernel driver if necessary
-if dev.is_kernel_driver_active(0):
-    print("Detaching kernel driver...")
-    dev.detach_kernel_driver(0)
+    if dev.is_kernel_driver_active(0):
+        print("Detaching kernel driver...")
+        dev.detach_kernel_driver(0)
 
-# Set configuration
-dev.set_configuration()
-cfg = dev.get_active_configuration()
-intf = cfg[(0, 0)]
+    dev.set_configuration()
+    cfg = dev.get_active_configuration()
+    intf = cfg[(0, 0)]
 
-# Find Bulk OUT and Bulk IN endpoints
-ep_out = usb.util.find_descriptor(
-    intf,
-    custom_match=lambda e: usb.util.endpoint_direction(e.bEndpointAddress) == usb.util.ENDPOINT_OUT
-)
+    ep_out = usb.util.find_descriptor(
+        intf,
+        custom_match=lambda e: usb.util.endpoint_direction(e.bEndpointAddress) == usb.util.ENDPOINT_OUT
+    )
 
-ep_in = usb.util.find_descriptor(
-    intf,
-    custom_match=lambda e: usb.util.endpoint_direction(e.bEndpointAddress) == usb.util.ENDPOINT_IN
-)
+    ep_in = usb.util.find_descriptor(
+        intf,
+        custom_match=lambda e: usb.util.endpoint_direction(e.bEndpointAddress) == usb.util.ENDPOINT_IN
+    )
 
-if ep_out is None or ep_in is None:
-    raise ValueError("Could not find both Bulk OUT and Bulk IN endpoints")
+    if ep_out is None or ep_in is None:
+        raise ValueError("Could not find both Bulk OUT and Bulk IN endpoints")
 
-print(f"Bulk OUT endpoint: 0x{ep_out.bEndpointAddress:02x}")
-print(f"Bulk IN endpoint: 0x{ep_in.bEndpointAddress:02x}")
+    print(f"Bulk OUT endpoint: 0x{ep_out.bEndpointAddress:02x}")
+    print(f"Bulk IN endpoint: 0x{ep_in.bEndpointAddress:02x}")
 
-# Helper to compute checksum (same as Demo Tool)
+    return dev, ep_out, ep_in
+
+# Compute checksum (same as Demo Tool)
 def compute_checksum(dev_id, cmd, param):
     chksum = dev_id + cmd
     chksum += (param & 0xFFFF)
     chksum += ((param >> 16) & 0xFFFF)
     return chksum & 0xFFFF
 
-# Function to send command and receive response
-def send_gt521f52_command(cmd, param):
+# Send command and receive response
+def send_gt521f52_command(ep_out, ep_in, cmd, param):
     print(f"\nSending CMD: 0x{cmd:04X}, Param: 0x{param:08X}")
 
     # Step 1: SEND phase → EF FE
     CBW_SIGNATURE = 0x43425355
     CBW_TAG = random.randint(1, 0xFFFFFFFF)
-    CBW_DATA_TRANSFER_LENGTH = 12  # 12 bytes data OUT
-    CBW_FLAGS = 0x00  # OUT
+    CBW_DATA_TRANSFER_LENGTH = 12
+    CBW_FLAGS = 0x00
     CBW_LUN = 0
     CBW_CB_LENGTH = 10
 
     cdb_send = [0xEF, 0xFE] + [0x00] * 8
     cdb_send_bytes = bytes(cdb_send)
 
-    # Build command packet
     chksum = compute_checksum(DEVICE_ID, cmd, param)
     cmd_packet = struct.pack('<HHIHH',
         DEVICE_ID,
@@ -77,7 +76,6 @@ def send_gt521f52_command(cmd, param):
         0x0000
     )
 
-    # Build CBW
     cbw_send = struct.pack(
         '<I I I B B B 16s',
         CBW_SIGNATURE,
@@ -89,19 +87,17 @@ def send_gt521f52_command(cmd, param):
         cdb_send_bytes.ljust(16, b'\x00')
     )
 
-    # Send CBW
     print("Sending CBW (EF FE)...")
     ep_out.write(cbw_send)
     time.sleep(0.01)
 
-    # Send command packet (12 bytes)
     print("Sending Command Packet...")
     ep_out.write(cmd_packet)
     time.sleep(0.01)
 
     # Step 2: RECEIVE phase → EF FF
-    CBW_DATA_TRANSFER_LENGTH_IN = 12  # Demo Tool expects 12, but we will read 13 bytes to catch CSW
-    CBW_FLAGS_IN = 0x80  # IN
+    CBW_DATA_TRANSFER_LENGTH_IN = 12
+    CBW_FLAGS_IN = 0x80
 
     cdb_recv = [0xEF, 0xFF] + [0x00] * 8
     cdb_recv_bytes = bytes(cdb_recv)
@@ -117,18 +113,16 @@ def send_gt521f52_command(cmd, param):
         cdb_recv_bytes.ljust(16, b'\x00')
     )
 
-    # Send CBW for receive
     print("Sending CBW (EF FF)...")
     ep_out.write(cbw_recv)
     time.sleep(0.01)
 
-    # Read response (13 bytes → Response Packet + CSW Status)
     print("Reading Response Packet...")
     resp = ep_in.read(13, timeout=1000)
     print(f"Response ({len(resp)} bytes):")
     print(' '.join(f'{b:02X}' for b in resp))
 
-    # Parse response packet (first 12 bytes)
+    # Parse response
     resp_packet = resp[0:12]
     csw_status = resp[12]
 
@@ -151,18 +145,24 @@ def send_gt521f52_command(cmd, param):
     else:
         print(f"CSW Status: Unknown ({csw_status})")
 
-# === TESTING ===
+    # REQUIRED → safe delay after EF FF
+    print("Waiting 50ms before next command...")
+    time.sleep(0.05)
 
-# CMD_OPEN → CMD = 0x01, Param = 0x00000001
-send_gt521f52_command(0x01, 0x00000001)
+# Main test loop
+if __name__ == "__main__":
+    dev, ep_out, ep_in = init_device()
 
-# CMD_CMOS_LED ON → CMD = 0x12, Param = 0x00000001
-send_gt521f52_command(0x12, 0x00000001)
+    # CMD_OPEN
+    send_gt521f52_command(ep_out, ep_in, 0x01, 0x00000001)
 
-# Wait a moment with LED ON
-time.sleep(1)
+    # CMD_CMOS_LED ON
+    send_gt521f52_command(ep_out, ep_in, 0x12, 0x00000001)
 
-# CMD_CMOS_LED OFF → CMD = 0x12, Param = 0x00000000
-send_gt521f52_command(0x12, 0x00000000)
+    # Wait 1 second with LED ON
+    time.sleep(1)
 
-print("\nDone.")
+    # CMD_CMOS_LED OFF
+    send_gt521f52_command(ep_out, ep_in, 0x12, 0x00000000)
+
+    print("\nDone.")
