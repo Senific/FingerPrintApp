@@ -28,11 +28,11 @@ def send_cmd(ser, cmd, label):
 
 # === Test 1: Keep at 9600 baud ===
 print("\n=== TEST 1: Stay at 9600 baud ===\n")
-ser = serial.Serial(SERIAL_PORT, INITIAL_BAUD, timeout=1)
+ser = serial.Serial(SERIAL_PORT, INITIAL_BAUD, timeout=1, rtscts=False, dsrdtr=False)
 print(f"[INFO] Serial port {SERIAL_PORT} opened at {INITIAL_BAUD} baud.\n")
 
 send_cmd(ser, CMD_OPEN, "CMD_OPEN")
-time.sleep(0.2)
+time.sleep(0.5)  # longer delay after OPEN
 
 send_cmd(ser, CMD_CMOS_LED_ON, "CMOS_LED ON at 9600")
 time.sleep(0.5)
@@ -43,11 +43,11 @@ print("[INFO] Serial port closed.\n")
 
 # === Test 2: Switch to 115200 baud ===
 print("\n=== TEST 2: Switch to 115200 baud after OPEN ===\n")
-ser = serial.Serial(SERIAL_PORT, INITIAL_BAUD, timeout=1)
+ser = serial.Serial(SERIAL_PORT, INITIAL_BAUD, timeout=1, rtscts=False, dsrdtr=False)
 print(f"[INFO] Serial port {SERIAL_PORT} opened at {INITIAL_BAUD} baud.\n")
 
 send_cmd(ser, CMD_OPEN, "CMD_OPEN")
-time.sleep(0.2)
+time.sleep(0.5)  # longer delay after OPEN
 
 print(f"[INFO] Switching serial baud rate to {OPERATING_BAUD} baud...")
 ser.close()
