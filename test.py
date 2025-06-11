@@ -37,6 +37,15 @@ ep_in = usb.util.find_descriptor(
 print(f"Bulk OUT endpoint: 0x{ep_out.bEndpointAddress:02X}")
 print(f"Bulk IN endpoint: 0x{ep_in.bEndpointAddress:02X}")
 
+# --- USB Control Transfer to switch to FP mode ---
+print("Sending USB Control Transfer to switch to FP mode...")
+try:
+    dev.ctrl_transfer(0x21, 0x09, 0x0200, 0x0001, [0x01])
+    time.sleep(0.2)  # wait 200 ms
+    print("Control Transfer sent successfully.")
+except usb.core.USBError as e:
+    print(f"WARNING: Control transfer failed (may not be needed): {str(e)}")
+
 # --- Helper: send command ---
 def send_gt521f52_command(ep_out, ep_in, cmd, param=0):
     print(f"\nSending CMD: 0x{cmd:04X}, Param: 0x{param:08X}")
