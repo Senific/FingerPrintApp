@@ -100,7 +100,7 @@ def send_gt521f52_command(cmd, param):
     time.sleep(0.01)
 
     # Step 2: RECEIVE phase → EF FF
-    CBW_DATA_TRANSFER_LENGTH_IN = 12
+    CBW_DATA_TRANSFER_LENGTH_IN = 12  # Demo Tool expects 12, but we will read 13 bytes to catch CSW
     CBW_FLAGS_IN = 0x80  # IN
 
     cdb_recv = [0xEF, 0xFF] + [0x00] * 8
@@ -122,19 +122,34 @@ def send_gt521f52_command(cmd, param):
     ep_out.write(cbw_recv)
     time.sleep(0.01)
 
-    # Read response (12 bytes)
+    # Read response (13 bytes → Response Packet + CSW Status)
     print("Reading Response Packet...")
-    resp = ep_in.read(12, timeout=1000)
+    resp = ep_in.read(13, timeout=1000)
     print(f"Response ({len(resp)} bytes):")
     print(' '.join(f'{b:02X}' for b in resp))
 
-    # Parse response
-    resp_dev_id, resp_ack, resp_param, resp_chksum, resp_zero = struct.unpack('<HHIHH', bytes(resp))
+    # Parse response packet (first 12 bytes)
+    resp_packet = resp[0:12]
+    csw_status = resp[12]
+
+    resp_dev_id, resp_ack, resp_param, resp_chksum, resp_zero = struct.unpack('<HHIHH', bytes(resp_packet))
+
     print(f"Device ID: 0x{resp_dev_id:04X}")
     print(f"ACK / NACK: 0x{resp_ack:04X}")
     print(f"Param: 0x{resp_param:08X}")
     print(f"Checksum: 0x{resp_chksum:04X}")
     print(f"Zero: 0x{resp_zero:04X}")
+    print(f"CSW Status: {csw_status}")
+
+    # Interpret CSW status
+    if csw_status == 0x00:
+        print("CSW Status: Command Passed.")
+    elif csw_status == 0x01:
+        print("CSW Status: Command Failed.")
+    elif csw_status == 0x02:
+        print("CSW Status: Phase Error.")
+    else:
+        print(f"CSW Status: Unknown ({csw_status})")
 
 # === TESTING ===
 
