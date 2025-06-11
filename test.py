@@ -2,219 +2,116 @@ import usb.core
 import usb.util
 import struct
 import time
-import random
 
-# Device VID/PID
-VENDOR_ID = 0x2009
-PRODUCT_ID = 0x7638
-
-# Device ID used in protocol
-DEVICE_ID = 0x0001
-
-# Initialize device
-def init_device():
-    dev = usb.core.find(idVendor=VENDOR_ID, idProduct=PRODUCT_ID)
+# Find device
+dev = usb.core.find(idVendor=0x0x1D6B, idProduct=0x0002)  # <- replace with your correct VID/PID if needed
+if dev is None:
+    dev = usb.core.find(idVendor=0x1C7A, idProduct=0x0570)  # GT-521F52 default VID/PID
     if dev is None:
-        raise ValueError('Device not found')
+        raise ValueError('Device not found!')
 
-    print("Device found!")
+print("Device found!")
 
-    if dev.is_kernel_driver_active(0):
-        print("Detaching kernel driver...")
-        dev.detach_kernel_driver(0)
+# Detach kernel driver if necessary
+if dev.is_kernel_driver_active(0):
+    print("Detaching kernel driver...")
+    dev.detach_kernel_driver(0)
 
-    dev.set_configuration()
-    cfg = dev.get_active_configuration()
-    intf = cfg[(0, 0)]
+# Set configuration
+dev.set_configuration()
+cfg = dev.get_active_configuration()
+intf = cfg[(0, 0)]
 
-    ep_out = usb.util.find_descriptor(
-        intf,
-        custom_match=lambda e: usb.util.endpoint_direction(e.bEndpointAddress) == usb.util.ENDPOINT_OUT
-    )
+# Get endpoints
+ep_out = usb.util.find_descriptor(intf, custom_match=lambda e: usb.util.endpoint_direction(e.bEndpointAddress) == usb.util.ENDPOINT_OUT)
+ep_in = usb.util.find_descriptor(intf, custom_match=lambda e: usb.util.endpoint_direction(e.bEndpointAddress) == usb.util.ENDPOINT_IN)
 
-    ep_in = usb.util.find_descriptor(
-        intf,
-        custom_match=lambda e: usb.util.endpoint_direction(e.bEndpointAddress) == usb.util.ENDPOINT_IN
-    )
+print(f"Bulk OUT endpoint: 0x{ep_out.bEndpointAddress:02X}")
+print(f"Bulk IN endpoint: 0x{ep_in.bEndpointAddress:02X}")
 
-    if ep_out is None or ep_in is None:
-        raise ValueError("Could not find both Bulk OUT and Bulk IN endpoints")
-
-    print(f"Bulk OUT endpoint: 0x{ep_out.bEndpointAddress:02x}")
-    print(f"Bulk IN endpoint: 0x{ep_in.bEndpointAddress:02x}")
-
-    return dev, ep_out, ep_in
-
-# Compute checksum (same as Demo Tool)
-def compute_checksum(dev_id, cmd, param):
-    chksum = dev_id + cmd
-    chksum += (param & 0xFFFF)
-    chksum += ((param >> 16) & 0xFFFF)
-    return chksum & 0xFFFF
-
-# Send command and receive response
-def send_gt521f52_command(ep_out, ep_in, cmd, param, expect_data_len=0):
+# --- Helper: send command ---
+def send_gt521f52_command(ep_out, ep_in, cmd, param=0):
     print(f"\nSending CMD: 0x{cmd:04X}, Param: 0x{param:08X}")
 
-    # Step 1: SEND phase → EF FE
-    CBW_SIGNATURE = 0x43425355
-    CBW_TAG = random.randint(1, 0xFFFFFFFF)
-    CBW_DATA_TRANSFER_LENGTH = 12
-    CBW_FLAGS = 0x00
-    CBW_LUN = 0
-    CBW_CB_LENGTH = 10
-
-    cdb_send = [0xEF, 0xFE] + [0x00] * 8
-    cdb_send_bytes = bytes(cdb_send)
-
-    chksum = compute_checksum(DEVICE_ID, cmd, param)
-    cmd_packet = struct.pack('<HHIHH',
-        DEVICE_ID,
-        cmd,
-        param,
-        chksum,
-        0x0000
-    )
-
-    cbw_send = struct.pack(
-        '<I I I B B B 16s',
-        CBW_SIGNATURE,
-        CBW_TAG,
-        CBW_DATA_TRANSFER_LENGTH,
-        CBW_FLAGS,
-        CBW_LUN,
-        CBW_CB_LENGTH,
-        cdb_send_bytes.ljust(16, b'\x00')
-    )
-
-    print("Sending CBW (EF FE)...")
+    # Create CBW packet
+    cbw_send = struct.pack('<4sIIIBB', b'USBC', 0x5355, 0, 12, 0xEF, 0xFE)  # USBC signature, Device ID = 0x5355
     ep_out.write(cbw_send)
-    time.sleep(0.01)
 
-    print("Sending Command Packet...")
-    ep_out.write(cmd_packet)
-    time.sleep(0.01)
+    # Build command packet (OpenPacket format)
+    packet = struct.pack('<HHIHI', 0x55AA, cmd, param, 0, 0)  # header, cmd, param, checksum=0, reserved=0
 
-    # Step 2: RECEIVE phase → EF FF
-    CBW_DATA_TRANSFER_LENGTH_IN = 12
-    CBW_FLAGS_IN = 0x80
+    # Calculate checksum
+    checksum = (cmd & 0xFFFF) + (param & 0xFFFF) + ((param >> 16) & 0xFFFF)
+    packet = struct.pack('<HHIHI', 0x55AA, cmd, param, checksum & 0xFFFF, 0)
 
-    cdb_recv = [0xEF, 0xFF] + [0x00] * 8
-    cdb_recv_bytes = bytes(cdb_recv)
+    # Send command packet
+    ep_out.write(packet)
 
-    cbw_recv = struct.pack(
-        '<I I I B B B 16s',
-        CBW_SIGNATURE,
-        CBW_TAG,
-        CBW_DATA_TRANSFER_LENGTH_IN,
-        CBW_FLAGS_IN,
-        CBW_LUN,
-        CBW_CB_LENGTH,
-        cdb_recv_bytes.ljust(16, b'\x00')
-    )
+    # Send second CBW (EF FF)
+    cbw_send = struct.pack('<4sIIIBB', b'USBC', 0x5355, 0, 12, 0xEF, 0xFF)
+    ep_out.write(cbw_send)
 
-    print("Sending CBW (EF FF)...")
-    ep_out.write(cbw_recv)
-    time.sleep(0.01)
-
-    print("Reading Response Packet...")
-    try:
-        resp = ep_in.read(13, timeout=1000)
-    except usb.core.USBError as e:
-        if e.errno == 32:
-            print("PIPE ERROR on Response Packet → Command not supported in USB mode. Proceeding safely.")
-            return 0, 0, None
-        else:
-            raise
-
+    # Read response
+    resp = ep_in.read(13, timeout=5000)
     print(f"Response ({len(resp)} bytes):")
-    print(' '.join(f'{b:02X}' for b in resp))
+    print(' '.join(f"{b:02X}" for b in resp))
 
     # Parse response
-    resp_packet = resp[0:12]
+    ack_nack = resp[4:8]
+    param_returned = struct.unpack('<I', resp[8:12])[0]
     csw_status = resp[12]
 
-    resp_dev_id, resp_ack, resp_param, resp_chksum, resp_zero = struct.unpack('<HHIHH', bytes(resp_packet))
+    result = {
+        'ACK': ack_nack == b'BS42',  # 0x5342 == ACK
+        'NACK': ack_nack != b'BS42',
+        'param': param_returned,
+        'csw_status': csw_status,
+    }
 
-    print(f"Device ID: 0x{resp_dev_id:04X}")
-    print(f"ACK / NACK: 0x{resp_ack:04X}")
-    print(f"Param: 0x{resp_param:08X}")
-    print(f"Checksum: 0x{resp_chksum:04X}")
-    print(f"Zero: 0x{resp_zero:04X}")
+    if result['ACK']:
+        print("ACK received.")
+    else:
+        print("NACK or unknown response.")
+
+    print(f"Param: 0x{param_returned:08X}")
     print(f"CSW Status: {csw_status}")
 
-    if csw_status == 0x00:
-        print("CSW Status: Command Passed.")
-    elif csw_status == 0x01:
-        print("CSW Status: Command Failed.")
-    elif csw_status == 0x02:
-        print("CSW Status: Phase Error.")
+    return result
+
+# --- Safe Delete All ---
+def safe_delete_all(ep_out, ep_in):
+    print("[SAFE DELETE ALL] Starting safe delete sequence...")
+
+    # Step 1: Turn LED ON
+    print("Turning LED ON...")
+    resp = send_gt521f52_command(ep_out, ep_in, 0x12, 0x00000001)  # CMD_CMOS_LED_ON
+    time.sleep(0.1)
+
+    if not resp or resp.get('ACK') != True:
+        print("WARNING: LED ON may have failed — aborting delete.")
+        return
+
+    # Step 2: CMD_DELETE_ALL
+    print("Sending CMD_DELETE_ALL...")
+    resp = send_gt521f52_command(ep_out, ep_in, 0x41, 0x00000000)  # CMD_DELETE_ALL
+
+    if not resp or resp.get('ACK') != True:
+        print("ERROR: Delete all failed or returned NACK.")
     else:
-        print(f"CSW Status: Unknown ({csw_status})")
+        print("SUCCESS: All fingerprints deleted.")
 
-    # If extra data is expected (not used here), handle it
-    if expect_data_len > 0:
-        print(f"Reading {expect_data_len} bytes of data...")
-        data = bytearray()
-        try:
-            while len(data) < expect_data_len:
-                chunk = ep_in.read(min(512, expect_data_len - len(data)), timeout=2000)
-                data.extend(chunk)
-            print(f"Read {len(data)} bytes.")
-        except usb.core.USBError as e:
-            if e.errno == 32:
-                print("PIPE ERROR while reading extra data → firmware sent no data. Proceeding safely.")
-                return resp_ack, resp_param, None
-            else:
-                raise
-        return resp_ack, resp_param, bytes(data)
+    # Step 3: Turn LED OFF
+    print("Turning LED OFF...")
+    send_gt521f52_command(ep_out, ep_in, 0x13, 0x00000000)  # CMD_CMOS_LED_OFF
 
-    return resp_ack, resp_param, None
+    print("[SAFE DELETE ALL] Done.\n")
 
-# Main test
-if __name__ == "__main__":
-    dev, ep_out, ep_in = init_device()
+# --- Main flow ---
+# 1. Open device
+send_gt521f52_command(ep_out, ep_in, 0x01, 0x00000001)  # CMD_OPEN
 
-    # CMD_OPEN
-    send_gt521f52_command(ep_out, ep_in, 0x01, 0x00000001)
+# 2. Safe delete all
+safe_delete_all(ep_out, ep_in)
 
-    # CMD_DELETE_ALL (clear existing)
-    send_gt521f52_command(ep_out, ep_in, 0x41, 0x00000000)
-
-    # ENROLL example → enrolling at position 1
-    pos = 1
-    print(f"\n*** ENROLL FINGERPRINT at position {pos} ***")
-
-    send_gt521f52_command(ep_out, ep_in, 0x22, pos)  # ENROLL_START
-
-    print("Place finger for Enroll Step 1...")
-    input("Press Enter after placing finger.")
-    send_gt521f52_command(ep_out, ep_in, 0x23, 1)  # ENROLL_1
-
-    print("Place finger for Enroll Step 2...")
-    input("Press Enter after placing finger.")
-    send_gt521f52_command(ep_out, ep_in, 0x23, 2)  # ENROLL_2
-
-    print("Place finger for Enroll Step 3...")
-    input("Press Enter after placing finger.")
-    send_gt521f52_command(ep_out, ep_in, 0x23, 3)  # ENROLL_3
-
-    print("Enrollment complete.")
-
-    # IDENTIFY
-    print("\n*** IDENTIFY FINGERPRINT ***")
-    print("Place finger to identify...")
-    input("Press Enter after placing finger.")
-
-    ack, param, _ = send_gt521f52_command(ep_out, ep_in, 0x51, 0x00000000)
-    if ack == 0x30:  # ACK_OK
-        print(f"Identify success → ID = {param}")
-    else:
-        print("Identify failed.")
-
-    # DELETE enrolled fingerprint
-    print("\n*** DELETE FINGERPRINT ***")
-    send_gt521f52_command(ep_out, ep_in, 0x40, pos)
-    print(f"Deleted fingerprint at position {pos}.")
-
-    print("\nDone.")
+# 3. Close device
+send_gt521f52_command(ep_out, ep_in, 0x02, 0x00000000)  # CMD_CLOSE
