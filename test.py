@@ -8,6 +8,9 @@ import random
 VENDOR_ID = 0x2009
 PRODUCT_ID = 0x7638
 
+# Device ID used in protocol
+DEVICE_ID = 0x0001
+
 # Find device
 dev = usb.core.find(idVendor=VENDOR_ID, idProduct=PRODUCT_ID)
 if dev is None:
@@ -42,78 +45,109 @@ if ep_out is None or ep_in is None:
 print(f"Bulk OUT endpoint: 0x{ep_out.bEndpointAddress:02x}")
 print(f"Bulk IN endpoint: 0x{ep_in.bEndpointAddress:02x}")
 
-# Build CBW (Command Block Wrapper)
-CBW_SIGNATURE = 0x43425355  # 'USBC'
-CBW_TAG = random.randint(1, 0xFFFFFFFF)
-CBW_DATA_TRANSFER_LENGTH = 512  # we will read 512 bytes (Demo Tool also reads 512 for EF FF)
-CBW_FLAGS = 0x80  # IN transfer (bit 7)
-CBW_LUN = 0
-CBW_CB_LENGTH = 10  # Length of CDB
+# Helper to compute checksum (same as Demo Tool)
+def compute_checksum(dev_id, cmd, param):
+    chksum = dev_id + cmd
+    chksum += (param & 0xFFFF)
+    chksum += ((param >> 16) & 0xFFFF)
+    return chksum & 0xFFFF
 
-# CDB: EF FF 00 00 00 00 00 00 00 00
-cdb = [0xEF, 0xFF] + [0x00] * 8
-cdb_bytes = bytes(cdb)
+# Function to send command and receive response
+def send_gt521f52_command(cmd, param):
+    print(f"\nSending CMD: 0x{cmd:04X}, Param: 0x{param:08X}")
 
-# Pack CBW as per USB Mass Storage Bulk-Only spec
-cbw = struct.pack(
-    '<I I I B B B 16s',
-    CBW_SIGNATURE,
-    CBW_TAG,
-    CBW_DATA_TRANSFER_LENGTH,
-    CBW_FLAGS,
-    CBW_LUN,
-    CBW_CB_LENGTH,
-    cdb_bytes.ljust(16, b'\x00')  # pad to 16 bytes
-)
+    # Step 1: SEND phase → EF FE
+    CBW_SIGNATURE = 0x43425355
+    CBW_TAG = random.randint(1, 0xFFFFFFFF)
+    CBW_DATA_TRANSFER_LENGTH = 12  # 12 bytes data OUT
+    CBW_FLAGS = 0x00  # OUT
+    CBW_LUN = 0
+    CBW_CB_LENGTH = 10
 
-# Send CBW
-print("Sending CBW...")
-ep_out.write(cbw)
-time.sleep(0.1)
+    cdb_send = [0xEF, 0xFE] + [0x00] * 8
+    cdb_send_bytes = bytes(cdb_send)
 
-# Data phase → Read 512 bytes
-try:
-    print("Reading Data Phase...")
-    data_in = ep_in.read(512, timeout=1000)
+    # Build command packet
+    chksum = compute_checksum(DEVICE_ID, cmd, param)
+    cmd_packet = struct.pack('<HHIHH',
+        DEVICE_ID,
+        cmd,
+        param,
+        chksum,
+        0x0000
+    )
 
-    print(f"Data ({len(data_in)} bytes):")
-    print(' '.join(f'{b:02X}' for b in data_in))
+    # Build CBW
+    cbw_send = struct.pack(
+        '<I I I B B B 16s',
+        CBW_SIGNATURE,
+        CBW_TAG,
+        CBW_DATA_TRANSFER_LENGTH,
+        CBW_FLAGS,
+        CBW_LUN,
+        CBW_CB_LENGTH,
+        cdb_send_bytes.ljust(16, b'\x00')
+    )
 
-except usb.core.USBError as e:
-    print(f"USB Error during Data Phase: {e}")
+    # Send CBW
+    print("Sending CBW (EF FE)...")
+    ep_out.write(cbw_send)
+    time.sleep(0.01)
 
-# Now read CSW (Command Status Wrapper) → 13 bytes
-try:
-    print("Reading CSW...")
-    csw = ep_in.read(13, timeout=1000)
+    # Send command packet (12 bytes)
+    print("Sending Command Packet...")
+    ep_out.write(cmd_packet)
+    time.sleep(0.01)
 
-    # Parse CSW
-    csw_signature = struct.unpack('<I', csw[0:4])[0]
-    csw_tag = struct.unpack('<I', csw[4:8])[0]
-    csw_data_residue = struct.unpack('<I', csw[8:12])[0]
-    csw_status = csw[12]
+    # Step 2: RECEIVE phase → EF FF
+    CBW_DATA_TRANSFER_LENGTH_IN = 12
+    CBW_FLAGS_IN = 0x80  # IN
 
-    # Display CSW
-    print(f"CSW Signature: {hex(csw_signature)}")
-    print(f"CSW Tag: {csw_tag}")
-    print(f"CSW Data Residue: {csw_data_residue}")
-    print(f"CSW Status: {csw_status}")
+    cdb_recv = [0xEF, 0xFF] + [0x00] * 8
+    cdb_recv_bytes = bytes(cdb_recv)
 
-    # Check CSW status
-    if csw_signature != 0x53425355:
-        print("Invalid CSW Signature!")
-    elif csw_tag != CBW_TAG:
-        print("CSW Tag does not match CBW Tag!")
-    elif csw_status == 0x00:
-        print("Command Passed.")
-    elif csw_status == 0x01:
-        print("Command Failed.")
-    elif csw_status == 0x02:
-        print("Phase Error.")
-    else:
-        print(f"Unknown CSW status: {csw_status}")
+    cbw_recv = struct.pack(
+        '<I I I B B B 16s',
+        CBW_SIGNATURE,
+        CBW_TAG,
+        CBW_DATA_TRANSFER_LENGTH_IN,
+        CBW_FLAGS_IN,
+        CBW_LUN,
+        CBW_CB_LENGTH,
+        cdb_recv_bytes.ljust(16, b'\x00')
+    )
 
-except usb.core.USBError as e:
-    print(f"USB Error during CSW read: {e}")
+    # Send CBW for receive
+    print("Sending CBW (EF FF)...")
+    ep_out.write(cbw_recv)
+    time.sleep(0.01)
 
-print("Done.")
+    # Read response (12 bytes)
+    print("Reading Response Packet...")
+    resp = ep_in.read(12, timeout=1000)
+    print(f"Response ({len(resp)} bytes):")
+    print(' '.join(f'{b:02X}' for b in resp))
+
+    # Parse response
+    resp_dev_id, resp_ack, resp_param, resp_chksum, resp_zero = struct.unpack('<HHIHH', bytes(resp))
+    print(f"Device ID: 0x{resp_dev_id:04X}")
+    print(f"ACK / NACK: 0x{resp_ack:04X}")
+    print(f"Param: 0x{resp_param:08X}")
+    print(f"Checksum: 0x{resp_chksum:04X}")
+    print(f"Zero: 0x{resp_zero:04X}")
+
+# === TESTING ===
+
+# CMD_OPEN → CMD = 0x01, Param = 0x00000001
+send_gt521f52_command(0x01, 0x00000001)
+
+# CMD_CMOS_LED ON → CMD = 0x12, Param = 0x00000001
+send_gt521f52_command(0x12, 0x00000001)
+
+# Wait a moment with LED ON
+time.sleep(1)
+
+# CMD_CMOS_LED OFF → CMD = 0x12, Param = 0x00000000
+send_gt521f52_command(0x12, 0x00000000)
+
+print("\nDone.")
