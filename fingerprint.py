@@ -75,7 +75,8 @@ class FingerprintScanner:
         self.send_packet("55 AA 01 00 00 00 00 00 2C 00 2C 01")
 
     def get_template_count(self):
-        resp = self.send_packet("55 AA 01 00 00 00 00 00 47 00 47 01", read_bytes=24)
+        # Use CMD_ENROLL_COUNT = 0x20
+        resp = self.send_packet("55 AA 01 00 00 00 00 00 20 00 20 01", read_bytes=24)
         resp_code, param = self.parse_response(resp)
         if resp_code == 0x3000:
             print(f"Template count: {param}")
@@ -83,6 +84,7 @@ class FingerprintScanner:
         else:
             print("Failed to get template count.")
             return None
+
 
     def delete_id(self, enroll_id):
         param_hex = enroll_id.to_bytes(4, byteorder='little').hex()
