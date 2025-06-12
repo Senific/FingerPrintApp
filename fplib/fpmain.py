@@ -440,7 +440,7 @@ class Fingerprint():
        
     def delete(self, idx=None):
         res = None
-         if idx == None:
+        if idx == None:
             # Delete all fingerprints
             res = self._send_packet("DeleteAll")
         else:
