@@ -119,7 +119,8 @@ class Fingerprint():
 
     def _send_packet(self, cmd, param=0):
         cmd = Fingerprint.COMMENDS[cmd]
-        param = [int(hex(param >> i & 0xFF), 16) for i in (0, 8, 16, 24)]
+        param_value = param if param is not None else 0
+        param = [int(hex(param_value >> i & 0xFF), 16) for i in (0, 8, 16, 24)]  
 
         packet = bytearray(12)
         packet[0] = 0x55
