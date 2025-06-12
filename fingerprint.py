@@ -61,7 +61,7 @@ class FingerprintScanner:
         self.send_packet("55 AA 01 00 00 00 00 00 2C 00 2C 01")
 
     def get_template_count(self):
-        resp = self.send_packet("55 AA 01 00 00 00 00 00 47 00 47 01")
+        resp = self.send_packet("55 AA 01 00 00 00 00 00 47 00 47 01", read_bytes=24)
         if len(resp) >= 12:
             resp_code = resp[8] + (resp[9] << 8)
             if resp_code == 0x3000:
