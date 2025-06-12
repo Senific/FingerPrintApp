@@ -1,7 +1,7 @@
 from fplib import fplib
 
 # fingerprint module variables
-fp = fplib(port=0, baud=115200, ledpin=25, timeout=3)
+fp = fplib(port='/dev/serial0', baud=115200, timeout=3)
 
 # module initializing
 init = fp.init()
