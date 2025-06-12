@@ -15,6 +15,19 @@ class FingerprintScanner:
         print(f"Resp: {resp.hex()}")
         return resp
 
+    def parse_response(self, resp):
+        if len(resp) < 12:
+            print("Invalid response length")
+            return None, None
+
+        resp_code = resp[8] + (resp[9] << 8)
+        param_bytes = resp[4:8]
+        param = int.from_bytes(param_bytes, byteorder='little')
+
+        print(f"Response Code: 0x{resp_code:04X}, Param: {param}")
+
+        return resp_code, param
+
     def open(self):
         self.send_packet("55 AA 01 00 00 00 00 00 01 00 01 01")
 
@@ -46,7 +59,8 @@ class FingerprintScanner:
         self.send_packet("55 AA 01 00 00 00 00 00 53 00 53 01")
 
     def is_press_finger(self):
-        self.send_packet("55 AA 01 00 00 00 00 00 26 00 26 01")
+        resp = self.send_packet("55 AA 01 00 00 00 00 00 26 00 26 01")
+        self.parse_response(resp)
 
     def get_image(self):
         self.send_packet("55 AA 01 00 00 00 00 00 2A 00 2A 01")
@@ -62,21 +76,13 @@ class FingerprintScanner:
 
     def get_template_count(self):
         resp = self.send_packet("55 AA 01 00 00 00 00 00 47 00 47 01", read_bytes=24)
-        if len(resp) >= 12:
-            resp_code = resp[8] + (resp[9] << 8)
-            if resp_code == 0x3000:
-                param_bytes = resp[4:8]
-                count = int.from_bytes(param_bytes, byteorder='little')
-                print(f"Template count: {count}")
-                return count
-            else:
-                print(f"Warning: Unexpected response code: 0x{resp_code:04X}")
-                return None
+        resp_code, param = self.parse_response(resp)
+        if resp_code == 0x3000:
+            print(f"Template count: {param}")
+            return param
         else:
-            print("Invalid response length")
+            print("Failed to get template count.")
             return None
-
-
 
     def delete_id(self, enroll_id):
         param_hex = enroll_id.to_bytes(4, byteorder='little').hex()
@@ -100,10 +106,12 @@ class FingerprintScanner:
         self.send_packet(packet)
 
     def get_security_level(self):
-        self.send_packet("55 AA 01 00 00 00 00 00 4E 00 4E 01")
+        resp = self.send_packet("55 AA 01 00 00 00 00 00 4E 00 4E 01")
+        self.parse_response(resp)
 
     def get_device_info(self):
-        self.send_packet("55 AA 01 00 00 00 00 00 31 00 31 01")
+        resp = self.send_packet("55 AA 01 00 00 00 00 00 31 00 31 01")
+        self.parse_response(resp)
 
     def enroll_start(self, enroll_id):
         param_hex = enroll_id.to_bytes(4, byteorder='little').hex()
