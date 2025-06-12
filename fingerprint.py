@@ -78,6 +78,9 @@ class FingerprintScanner:
     def is_press_finger(self):
         resp = self.send_packet("55 AA 01 00 00 00 00 00 26 00 26 01", read_bytes=12)
         resp_code, param = self.parse_response(resp)
+        if resp_code is None:
+            print("Failed to receive valid response.")
+            return None
         if resp_code == 0x0030:
             return param
         else:
