@@ -2,7 +2,8 @@ import serial
 import time
 
 # Open serial port — change /dev/ttyUSB0 if needed
-ser = serial.Serial('/dev/ttyUSB0', 9600, timeout=1)
+#ser = serial.Serial('/dev/ttyUSB0', 9600, timeout=1)
+ser = serial.Serial('/dev/serial0', 9600, timeout=1)
 
 def send_packet(packet_hex):
     packet = bytes.fromhex(packet_hex)
