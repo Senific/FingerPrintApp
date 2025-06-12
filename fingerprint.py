@@ -44,19 +44,23 @@ class FingerprintScanner:
         self.send_packet("55 AA 01 00 00 00 00 00 60 00 60 01")
 
     def identify(self):
-        self.send_packet("55 AA 01 00 00 00 00 00 51 00 51 01")
+        resp = self.send_packet("55 AA 01 00 00 00 00 00 51 00 51 01")
+        self.parse_response(resp)
 
     def verify(self, enroll_id):
         param_hex = enroll_id.to_bytes(4, byteorder='little').hex()
         checksum = (0x50 + sum(enroll_id.to_bytes(4, 'little'))) & 0xFFFF
         packet = f"55 AA 01 00 {param_hex[6:8]} {param_hex[4:6]} {param_hex[2:4]} {param_hex[0:2]} 50 00 {checksum & 0xFF:02X} {checksum >> 8:02X}"
-        self.send_packet(packet)
+        resp = self.send_packet(packet)
+        self.parse_response(resp)
 
     def verify_template(self):
-        self.send_packet("55 AA 01 00 00 00 00 00 52 00 52 01")
+        resp = self.send_packet("55 AA 01 00 00 00 00 00 52 00 52 01")
+        self.parse_response(resp)
 
     def identify_template(self):
-        self.send_packet("55 AA 01 00 00 00 00 00 53 00 53 01")
+        resp = self.send_packet("55 AA 01 00 00 00 00 00 53 00 53 01")
+        self.parse_response(resp)
 
     def is_press_finger(self):
         resp = self.send_packet("55 AA 01 00 00 00 00 00 26 00 26 01")
@@ -75,16 +79,14 @@ class FingerprintScanner:
         self.send_packet("55 AA 01 00 00 00 00 00 2C 00 2C 01")
 
     def get_template_count(self):
-        # Use CMD_ENROLL_COUNT = 0x20
         resp = self.send_packet("55 AA 01 00 00 00 00 00 20 00 20 01", read_bytes=24)
         resp_code, param = self.parse_response(resp)
-        if resp_code == 0x3000:
+        if resp_code == 0x0030:
             print(f"Template count: {param}")
             return param
         else:
             print("Failed to get template count.")
             return None
-
 
     def delete_id(self, enroll_id):
         param_hex = enroll_id.to_bytes(4, byteorder='little').hex()
