@@ -52,8 +52,18 @@ try:
     time.sleep(0.1)
 
     print("Reset and Clear HALT done.\n")
+    
 except usb.core.USBError as e:
     print(f"WARNING: Reset/Clear HALT failed: {e}\n")
+
+
+print("Setting Interface Alternate Setting...")
+try:
+    dev.set_interface_altsetting(interface=0, alternate_setting=0)
+    time.sleep(0.1)
+    print("Interface Alternate Setting done.\n")
+except usb.core.USBError as e:
+    print(f"WARNING: set_interface_altsetting failed: {e}\n")
 
 # --- CBW Builder ---
 def build_cbw(cdb, data_transfer_length, bmCBWFlags):
