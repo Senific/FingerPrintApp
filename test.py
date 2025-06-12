@@ -61,16 +61,6 @@ try:
 except usb.core.USBError as e:
     print(f"WARNING: set_interface_altsetting failed: {e}\n")
 
-# --- Vendor Switch Commands ---
-def send_vendor_switch(request):
-    print(f"Sending Vendor Switch: bRequest=0x{request:02X}")
-    try:
-        dev.ctrl_transfer(0x40, request, 0x0001, 0x0000, [0x01])
-        time.sleep(0.1)
-        print("Vendor Switch sent OK.\n")
-    except usb.core.USBError as e:
-        print(f"WARNING: Vendor Switch failed: {e}\n")
-
 # --- CBW Builder ---
 def build_cbw(cdb, data_transfer_length, bmCBWFlags):
     CBW_SIGNATURE = b'USBS'
@@ -87,7 +77,59 @@ def build_cbw(cdb, data_transfer_length, bmCBWFlags):
 
     return cbw_packet
 
-# --- Send CMD_OPEN ---
+# --- CMD_USB_INTERNAL_CHECK ---
+def send_cmd_usb_internal_check():
+    print("Sending CMD_USB_INTERNAL_CHECK...")
+
+    # CMD_USB_INTERNAL_CHECK → 0x0030
+    # Param = gwDevID = 0x0001
+    cdb_cmd_usb_check = struct.pack('<HHI', 0xAA55, 0x0030, 0x00000001)
+
+    # Add checksum + zero
+    checksum = (0x0030 & 0xFFFF) + (0x00000001 & 0xFFFF) + ((0x00000001 >> 16) & 0xFFFF)
+    cdb_cmd_usb_check += struct.pack('<HH', checksum & 0xFFFF, 0x0000)
+
+    # --- Send CBW (EF FE) ---
+    print("Sending CBW (EF FE)...")
+    cbw_usb_check = build_cbw(cdb_cmd_usb_check, 12, 0xEF)
+    ep_out.write(cbw_usb_check)
+    time.sleep(0.05)
+
+    # --- Send Command Packet ---
+    print("Sending Command Packet...")
+    ep_out.write(cdb_cmd_usb_check)
+    time.sleep(0.05)
+
+    # --- Send CBW (EF FF) ---
+    print("Sending CBW (EF FF)...")
+    cbw_usb_check2 = build_cbw(cdb_cmd_usb_check, 12, 0xFF)
+    ep_out.write(cbw_usb_check2)
+    time.sleep(0.05)
+
+    # --- Read Response Packet ---
+    print("Reading Response Packet...")
+    try:
+        resp = ep_in.read(13, timeout=5000)
+    except usb.core.USBError as e:
+        print(f"USBError while reading response: {str(e)}")
+        return False
+
+    print(f"Response ({len(resp)} bytes):")
+    print(' '.join(f"{b:02X}" for b in resp))
+
+    # Parse response
+    ack_nack = resp[4:8]
+    param_returned = struct.unpack('<I', resp[8:12])[0]
+    csw_status = resp[12]
+
+    if ack_nack == b'BS42' and param_returned == 0x55:
+        print("CMD_USB_INTERNAL_CHECK: SUCCESS → Device switched to Hybrid FP mode.")
+        return True
+    else:
+        print("CMD_USB_INTERNAL_CHECK: FAILED or NACK.")
+        return False
+
+# --- CMD_OPEN ---
 def send_cmd_open():
     print("Sending CMD_OPEN...")
 
@@ -135,16 +177,11 @@ def send_cmd_open():
 # --- Main flow ---
 print("\n--- STARTING TEST FLOW ---")
 
-# TEST VENDOR SWITCH COMMANDS ONE BY ONE:
-# UNCOMMENT ONE AT A TIME TO TEST WHICH ONE WORKS
-
-#send_vendor_switch(0x01)
-# send_vendor_switch(0x02)
-send_vendor_switch(0x03)
-
-# Once you find which one works, keep only that one active.
-
-# CMD_OPEN
-send_cmd_open()
+# 1. CMD_USB_INTERNAL_CHECK first
+if send_cmd_usb_internal_check():
+    print("\nProceeding to CMD_OPEN...")
+    send_cmd_open()
+else:
+    print("\nCannot proceed → CMD_USB_INTERNAL_CHECK failed.")
 
 print("\n--- TEST FLOW COMPLETE ---")
