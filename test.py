@@ -11,7 +11,7 @@ print("is initialized :", init)
 # Run only task that is specified
 task = 1
 
-fp.set_led(True)
+fp.set_led(False)
 
 # #=#=# ---------------------------- T.A.S.K.S ---------------------------------- #=#=#
 # # 1. turning ON & OFF LED
