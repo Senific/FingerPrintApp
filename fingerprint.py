@@ -53,6 +53,8 @@ class FingerprintScanner:
         return packet
 
     def send_packet(self, packet_hex, read_bytes=12, timeout_override=None):
+        self.ser.reset_input_buffer()      # match C++ PurgeComm
+        self.ser.reset_output_buffer()
         packet = bytes.fromhex(packet_hex)
         self.ser.write(packet)
         print(f"Sent: {packet_hex}")
@@ -99,6 +101,8 @@ class FingerprintScanner:
         else:
             print(f"Unexpected response code: 0x{resp_code:04X}")
             return None
+
+    # (Rest of the class remains unchanged)
 
     def wait_for_finger_press(self, timeout=10, verbose=True):
         self.led_on()
