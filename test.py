@@ -38,17 +38,29 @@ ep_in = usb.util.find_descriptor(
 print(f"Bulk OUT endpoint: 0x{ep_out.bEndpointAddress:02X}")
 print(f"Bulk IN endpoint: 0x{ep_in.bEndpointAddress:02X}")
 
+# --- USB Mass Storage Reset + Clear HALT ---
+print("\nSending USB Mass Storage Reset + Clear HALT...")
+try:
+    # Standard Mass Storage Reset
+    dev.ctrl_transfer(0x21, 0xFF, 0, 0, None)
+    time.sleep(0.1)
+
+    # Clear HALT on endpoints
+    usb.util.clear_halt(dev, ep_out.bEndpointAddress)
+    usb.util.clear_halt(dev, ep_in.bEndpointAddress)
+    time.sleep(0.1)
+
+    print("Reset and Clear HALT done.\n")
+except usb.core.USBError as e:
+    print(f"WARNING: Reset/Clear HALT failed: {e}\n")
+
 # --- CBW Builder ---
-def build_cbw(cdb, data_transfer_length):
-    """
-    Build CBW packet matching Demo Tool format.
-    """
+def build_cbw(cdb, data_transfer_length, bmCBWFlags):
     CBW_SIGNATURE = b'USBS'
     dCBWTag = random.randint(1, 0xFFFFFFFF)
     dCBWDataTransferLength = data_transfer_length
-    bmCBWFlags = 0xEF  # Matches Demo Tool
     bCBWLUN = 0
-    bCBWCBLength = 0x0D  # Matches Demo Tool (13 bytes)
+    bCBWCBLength = 0x0D
 
     # Pad CDB to 16 bytes
     CBWCB = cdb + bytes(16 - len(cdb))
@@ -61,33 +73,31 @@ def build_cbw(cdb, data_transfer_length):
 
 # --- Send CMD_OPEN ---
 def send_cmd_open():
-    print("\nSending CMD_OPEN...")
+    print("Sending CMD_OPEN...")
 
-    # CDB for CMD_OPEN → EF FE → param = 00000001
+    # Build CMD_OPEN CDB
     cdb_cmd_open = struct.pack('<HHI', 0xAA55, 0x01, 0x00000001)
 
     # Add checksum + zero
     checksum = (0x01 & 0xFFFF) + (0x00000001 & 0xFFFF) + ((0x00000001 >> 16) & 0xFFFF)
     cdb_cmd_open += struct.pack('<HH', checksum & 0xFFFF, 0x0000)
 
-    # Build CBW packet for CMD_OPEN
-    cbw_cmd_open = build_cbw(cdb_cmd_open, 12)
-
-    # --- Send first CBW (EF FE) ---
+    # --- Send CBW (EF FE) ---
     print("Sending CBW (EF FE)...")
+    cbw_cmd_open = build_cbw(cdb_cmd_open, 12, 0xEF)
     ep_out.write(cbw_cmd_open)
+    time.sleep(0.05)
 
-    # --- Send Command Packet (12 bytes) ---
+    # --- Send Command Packet ---
     print("Sending Command Packet...")
     ep_out.write(cdb_cmd_open)
+    time.sleep(0.05)
 
-    # --- Send second CBW (EF FF) ---
+    # --- Send CBW (EF FF) ---
     print("Sending CBW (EF FF)...")
-    # Build second CBW with EF FF
-    cbw_cmd_open2 = build_cbw(cdb_cmd_open, 12)
-    # Change bmCBWFlags to 0xFF
-    cbw_cmd_open2 = cbw_cmd_open2[:12] + struct.pack('B', 0xFF) + cbw_cmd_open2[13:]
+    cbw_cmd_open2 = build_cbw(cdb_cmd_open, 12, 0xFF)
     ep_out.write(cbw_cmd_open2)
+    time.sleep(0.05)
 
     # --- Read Response Packet ---
     print("Reading Response Packet...")
