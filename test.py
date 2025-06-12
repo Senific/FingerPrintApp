@@ -42,10 +42,8 @@ class sg_io_hdr(ctypes.Structure):
 # Build CMD_USB_INTERNAL_CHECK Command Packet → 12 bytes
 def build_cmd_usb_internal_check():
     cdb_cmd_usb_check = struct.pack('<HHI', 0xAA55, 0x0030, 0x00000001)
-
     checksum = (0x0030 & 0xFFFF) + (0x00000001 & 0xFFFF) + ((0x00000001 >> 16) & 0xFFFF)
     cdb_cmd_usb_check += struct.pack('<HH', checksum & 0xFFFF, 0x0000)
-
     return cdb_cmd_usb_check
 
 # Send CMD_USB_INTERNAL_CHECK
@@ -204,6 +202,51 @@ def send_mode_sense6():
 
     os.close(fd)
 
+# Send TEST UNIT READY
+def send_test_unit_ready():
+    print("Sending TEST UNIT READY via SG_IO...")
+
+    cdb = bytearray(6)
+    cdb[0] = 0x00  # TEST UNIT READY
+
+    sense_buffer = ctypes.create_string_buffer(32)
+
+    hdr = sg_io_hdr()
+    hdr.interface_id = ord('S')
+    hdr.dxfer_direction = SG_DXFER_NONE
+    hdr.cmd_len = len(cdb)
+    hdr.mx_sb_len = len(sense_buffer)
+    hdr.iovec_count = 0
+    hdr.dxfer_len = 0
+    hdr.dxferp = 0
+    hdr.cmdp = ctypes.addressof(ctypes.create_string_buffer(bytes(cdb)))
+    hdr.sbp = ctypes.addressof(sense_buffer)
+    hdr.timeout = 5000
+    hdr.flags = 0
+    hdr.pack_id = 0
+    hdr.usr_ptr = None
+    hdr.status = 0
+    hdr.masked_status = 0
+    hdr.msg_status = 0
+    hdr.sb_len_wr = 0
+    hdr.host_status = 0
+    hdr.driver_status = 0
+    hdr.resid = 0
+    hdr.duration = 0
+    hdr.info = 0
+
+    fd = os.open(DEV_PATH, os.O_RDWR)
+
+    try:
+        fcntl.ioctl(fd, SG_IO, hdr)
+        print("SG_IO ioctl sent successfully (TEST UNIT READY).")
+        print(f"SG_IO status: {hdr.status}, host_status: {hdr.host_status}, driver_status: {hdr.driver_status}")
+
+    except Exception as e:
+        print(f"SG_IO ioctl failed (TEST UNIT READY): {str(e)}")
+
+    os.close(fd)
+
 # Main flow
 if __name__ == "__main__":
     print("--- FIRST CMD_USB_INTERNAL_CHECK ---")
@@ -233,7 +276,16 @@ if __name__ == "__main__":
     print("\nWaiting 200 ms...")
     time.sleep(0.2)
 
-    print("\n--- FINAL CMD_USB_INTERNAL_CHECK ---")
+    print("\n--- TEST UNIT READY ---")
+    send_test_unit_ready()
+
+    print("\n--- FOURTH REQUEST SENSE ---")
+    send_request_sense()
+
+    print("\nWaiting 200 ms...")
+    time.sleep(0.2)
+
+    print("\n--- FINAL CMD_USB_INTERNAL_CHECK AFTER TUR ---")
     send_cmd_usb_internal_check()
 
     print("\n--- FLOW COMPLETE ---")
