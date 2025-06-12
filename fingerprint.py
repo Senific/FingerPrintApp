@@ -3,7 +3,18 @@ import time
 
 class FingerprintScanner:
     def __init__(self, port='/dev/serial0', baudrate=9600):
-        self.ser = serial.Serial(port, baudrate, timeout=1)
+        self.ser = serial.Serial(
+            port,
+            baudrate,
+            timeout=None,          # blocking read like C++
+            write_timeout=1,
+            bytesize=serial.EIGHTBITS,
+            parity=serial.PARITY_NONE,
+            stopbits=serial.STOPBITS_ONE,
+            xonxoff=False,         # no software flow control
+            rtscts=False,          # no hardware flow control
+            dsrdtr=False           # no hardware flow control
+        )
         time.sleep(0.1)  # Wait for serial to stabilize
 
     def receive_packet(self, expected_length=12, timeout=1.0):
