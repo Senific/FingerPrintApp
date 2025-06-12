@@ -209,7 +209,7 @@ if __name__ == "__main__":
     print("--- FIRST CMD_USB_INTERNAL_CHECK ---")
     send_cmd_usb_internal_check()
 
-    print("\n--- REQUEST SENSE ---")
+    print("\n--- FIRST REQUEST SENSE ---")
     send_request_sense()
 
     print("\nWaiting 200 ms...")
@@ -218,16 +218,22 @@ if __name__ == "__main__":
     print("\n--- SECOND CMD_USB_INTERNAL_CHECK ---")
     send_cmd_usb_internal_check()
 
+    print("\n--- SECOND REQUEST SENSE ---")
+    send_request_sense()
+
     print("\nWaiting 200 ms...")
     time.sleep(0.2)
 
     print("\n--- MODE SENSE(6) ---")
     send_mode_sense6()
 
+    print("\n--- THIRD REQUEST SENSE ---")
+    send_request_sense()
+
     print("\nWaiting 200 ms...")
     time.sleep(0.2)
 
-    print("\n--- THIRD CMD_USB_INTERNAL_CHECK ---")
+    print("\n--- FINAL CMD_USB_INTERNAL_CHECK ---")
     send_cmd_usb_internal_check()
 
     print("\n--- FLOW COMPLETE ---")
