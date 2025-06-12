@@ -47,24 +47,19 @@ def build_cmd_usb_internal_check():
 
     return cdb_cmd_usb_check
 
-# Main SG_IO send function
+# Send CMD_USB_INTERNAL_CHECK
 def send_cmd_usb_internal_check():
     print("Sending CMD_USB_INTERNAL_CHECK via SG_IO...")
 
-    # Build CDB → EF FE
     cdb = bytearray(16)
     cdb[0] = 0xEF
     cdb[1] = 0xFE
     cdb[4] = 12  # Data-Out length (12 bytes)
 
-    # Build Data-Out → 12-byte Command Packet
     data_out = build_cmd_usb_internal_check()
     data_out_buffer = ctypes.create_string_buffer(data_out)
-
-    # Sense buffer → not used but required
     sense_buffer = ctypes.create_string_buffer(32)
 
-    # Build SG_IO header
     hdr = sg_io_hdr()
     hdr.interface_id = ord('S')
     hdr.dxfer_direction = SG_DXFER_TO_DEV
@@ -75,7 +70,7 @@ def send_cmd_usb_internal_check():
     hdr.dxferp = ctypes.addressof(data_out_buffer)
     hdr.cmdp = ctypes.addressof(ctypes.create_string_buffer(bytes(cdb)))
     hdr.sbp = ctypes.addressof(sense_buffer)
-    hdr.timeout = 5000  # 5000 ms
+    hdr.timeout = 5000
     hdr.flags = 0
     hdr.pack_id = 0
     hdr.usr_ptr = None
@@ -89,28 +84,82 @@ def send_cmd_usb_internal_check():
     hdr.duration = 0
     hdr.info = 0
 
-    # Open device
     fd = os.open(DEV_PATH, os.O_RDWR)
 
-    # Send ioctl
     try:
         fcntl.ioctl(fd, SG_IO, hdr)
         print("SG_IO ioctl sent successfully.")
-
-        # Check status
         print(f"SG_IO status: {hdr.status}, host_status: {hdr.host_status}, driver_status: {hdr.driver_status}")
 
         if hdr.status == 0 and hdr.host_status == 0 and hdr.driver_status == 0:
-            print("CMD_USB_INTERNAL_CHECK likely accepted.")
+            print("CMD_USB_INTERNAL_CHECK accepted → device may be unlocked!")
         else:
-            print("CMD_USB_INTERNAL_CHECK may have failed (check response/status).")
-
+            print("CMD_USB_INTERNAL_CHECK returned CHECK CONDITION or error.")
     except Exception as e:
         print(f"SG_IO ioctl failed: {str(e)}")
 
-    # Close device
     os.close(fd)
 
-# Main
+# Send Request Sense
+def send_request_sense():
+    print("Sending Request Sense via SG_IO...")
+
+    cdb = bytearray(6)
+    cdb[0] = 0x03
+    cdb[4] = 18  # Allocation length
+
+    data_in_buffer = ctypes.create_string_buffer(18)
+    sense_buffer = ctypes.create_string_buffer(32)
+
+    hdr = sg_io_hdr()
+    hdr.interface_id = ord('S')
+    hdr.dxfer_direction = SG_DXFER_FROM_DEV
+    hdr.cmd_len = len(cdb)
+    hdr.mx_sb_len = len(sense_buffer)
+    hdr.iovec_count = 0
+    hdr.dxfer_len = len(data_in_buffer)
+    hdr.dxferp = ctypes.addressof(data_in_buffer)
+    hdr.cmdp = ctypes.addressof(ctypes.create_string_buffer(bytes(cdb)))
+    hdr.sbp = ctypes.addressof(sense_buffer)
+    hdr.timeout = 5000
+    hdr.flags = 0
+    hdr.pack_id = 0
+    hdr.usr_ptr = None
+    hdr.status = 0
+    hdr.masked_status = 0
+    hdr.msg_status = 0
+    hdr.sb_len_wr = 0
+    hdr.host_status = 0
+    hdr.driver_status = 0
+    hdr.resid = 0
+    hdr.duration = 0
+    hdr.info = 0
+
+    fd = os.open(DEV_PATH, os.O_RDWR)
+
+    try:
+        fcntl.ioctl(fd, SG_IO, hdr)
+        print("SG_IO ioctl sent successfully (Request Sense).")
+        print(f"SG_IO status: {hdr.status}, host_status: {hdr.host_status}, driver_status: {hdr.driver_status}")
+
+        sense_data = bytes(data_in_buffer)
+        print("Sense Data:")
+        print(' '.join(f'{b:02X}' for b in sense_data))
+
+    except Exception as e:
+        print(f"SG_IO ioctl failed (Request Sense): {str(e)}")
+
+    os.close(fd)
+
+# Main flow
 if __name__ == "__main__":
+    print("--- FIRST CMD_USB_INTERNAL_CHECK ---")
     send_cmd_usb_internal_check()
+
+    print("\n--- REQUEST SENSE ---")
+    send_request_sense()
+
+    print("\n--- SECOND CMD_USB_INTERNAL_CHECK ---")
+    send_cmd_usb_internal_check()
+
+    print("\n--- FLOW COMPLETE ---")
