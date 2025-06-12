@@ -9,8 +9,9 @@ def main():
     print("""
  open, close, led_on, led_off
  capture, identify, verify, verify_template, identify_template
- is_press_finger, get_image, get_raw_image, get_live_image
- cancel, get_user_count, delete_id, delete_all
+ is_press_finger, wait_for_finger_press, wait_for_finger_release
+ get_image, get_raw_image, cancel
+ get_user_count, delete_id, delete_all
  get_template, set_template
  set_security, get_security
  module_info
@@ -41,12 +42,14 @@ def main():
             scanner.identify_template()
         elif cmd == "is_press_finger":
             scanner.is_press_finger()
+        elif cmd == "wait_for_finger_press":
+            scanner.wait_for_finger_press()
+        elif cmd == "wait_for_finger_release":
+            scanner.wait_for_finger_release()
         elif cmd == "get_image":
             scanner.get_image()
         elif cmd == "get_raw_image":
             scanner.get_raw_image()
-        elif cmd == "get_live_image":
-            scanner.get_live_image()
         elif cmd == "cancel":
             scanner.cancel()
         elif cmd == "get_user_count":
@@ -54,6 +57,7 @@ def main():
         elif cmd == "delete_id":
             enroll_id = int(input(" Enter Enroll ID to delete (0~2999): "))
             scanner.delete_id(enroll_id)
+            print(f"Deleted ID {enroll_id}")
         elif cmd == "delete_all":
             scanner.delete_all()
         elif cmd == "get_template":
@@ -71,14 +75,17 @@ def main():
             enroll_id = int(input(" Enter Enroll ID (0~2999): "))
             scanner.enroll_start(enroll_id)
             print(" Place finger for step 1")
-            input(" Press Enter when ready...")
+            scanner.wait_for_finger_press()
             scanner.enroll_step(0x0023)
+            scanner.wait_for_finger_release()
             print(" Place finger for step 2")
-            input(" Press Enter when ready...")
+            scanner.wait_for_finger_press()
             scanner.enroll_step(0x0024)
+            scanner.wait_for_finger_release()
             print(" Place finger for step 3")
-            input(" Press Enter when ready...")
+            scanner.wait_for_finger_press()
             scanner.enroll_step(0x0025)
+            scanner.wait_for_finger_release()
             print(f" Enroll complete for ID {enroll_id}")
         elif cmd == "exit":
             print("Exiting...")

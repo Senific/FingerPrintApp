@@ -74,6 +74,24 @@ class FingerprintScanner:
         else:
             print("Invalid response length")
 
+    def wait_for_finger_press(self):
+        print("Waiting for finger press...")
+        while True:
+            resp = self.send_packet("55 AA 01 00 00 00 00 00 26 00 26 01", read_bytes=1)
+            if len(resp) == 1 and resp[0] == 0x01:
+                print("Finger is pressed.")
+                break
+            time.sleep(0.1)
+
+    def wait_for_finger_release(self):
+        print("Waiting for finger release...")
+        while True:
+            resp = self.send_packet("55 AA 01 00 00 00 00 00 26 00 26 01", read_bytes=1)
+            if len(resp) == 1 and resp[0] == 0x00:
+                print("Finger is released.")
+                break
+            time.sleep(0.1)
+
     def get_image(self):
         self.send_packet("55 AA 01 00 00 00 00 00 2A 00 2A 01")
 
