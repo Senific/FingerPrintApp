@@ -19,6 +19,7 @@ class FingerprintScanner:
             header = self.ser.read(2)
             if len(header) == 2 and header[0] == 0x55 and header[1] == 0xAA:
                 packet += header
+                start_time = time.time()  # reset timeout after header received
                 break
             else:
                 time.sleep(0.005)
@@ -33,6 +34,7 @@ class FingerprintScanner:
             chunk = self.ser.read(remaining)
             if chunk:
                 packet += chunk
+                start_time = time.time()  # reset timeout after any data received
             else:
                 time.sleep(0.005)
 
