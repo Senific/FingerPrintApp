@@ -4,9 +4,18 @@ import time
 def main():
     scanner = FingerprintScanner('/dev/serial0', 9600)
 
-    print("GT-521Fx2 Console Control")
+    print("GT-521Fx2 Console Control - FULL")
     print("Available commands:")
-    print(" open, close, led_on, led_off, capture, identify, enroll, delete, exit")
+    print("""
+ open, close, led_on, led_off
+ capture, identify, verify, verify_template, identify_template
+ is_press_finger, get_image, get_raw_image, get_live_image
+ cancel, get_user_count, delete_id, delete_all
+ get_template, set_template
+ set_security, get_security
+ module_info
+ enroll, exit
+""")
 
     while True:
         cmd = input("Command> ").strip().lower()
@@ -23,6 +32,41 @@ def main():
             scanner.capture()
         elif cmd == "identify":
             scanner.identify()
+        elif cmd == "verify":
+            enroll_id = int(input(" Enter Enroll ID to verify (0~2999): "))
+            scanner.verify(enroll_id)
+        elif cmd == "verify_template":
+            scanner.verify_template()
+        elif cmd == "identify_template":
+            scanner.identify_template()
+        elif cmd == "is_press_finger":
+            scanner.is_press_finger()
+        elif cmd == "get_image":
+            scanner.get_image()
+        elif cmd == "get_raw_image":
+            scanner.get_raw_image()
+        elif cmd == "get_live_image":
+            scanner.get_live_image()
+        elif cmd == "cancel":
+            scanner.cancel()
+        elif cmd == "get_user_count":
+            scanner.get_template_count()
+        elif cmd == "delete_id":
+            enroll_id = int(input(" Enter Enroll ID to delete (0~2999): "))
+            scanner.delete_id(enroll_id)
+        elif cmd == "delete_all":
+            scanner.delete_all()
+        elif cmd == "get_template":
+            scanner.get_template()
+        elif cmd == "set_template":
+            scanner.set_template()
+        elif cmd == "set_security":
+            level = int(input(" Enter Security Level (1~5): "))
+            scanner.set_security_level(level)
+        elif cmd == "get_security":
+            scanner.get_security_level()
+        elif cmd == "module_info":
+            scanner.get_device_info()
         elif cmd == "enroll":
             enroll_id = int(input(" Enter Enroll ID (0~2999): "))
             scanner.enroll_start(enroll_id)
@@ -36,10 +80,6 @@ def main():
             input(" Press Enter when ready...")
             scanner.enroll_step(0x0025)
             print(f" Enroll complete for ID {enroll_id}")
-        elif cmd == "delete":
-            enroll_id = int(input(" Enter Enroll ID to delete (0~2999): "))
-            scanner.delete_id(enroll_id)
-            print(f" Deleted ID {enroll_id}")
         elif cmd == "exit":
             print("Exiting...")
             break
