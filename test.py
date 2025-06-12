@@ -10,20 +10,19 @@ print("is initialized :", init)
 
 # Run only task that is specified
 task = 1
-
-fp.set_led(False)
+ 
 
 # #=#=# ---------------------------- T.A.S.K.S ---------------------------------- #=#=#
 # # 1. turning ON & OFF LED
-# if task == 1:
-#    # ON
-#    led = fp.set_led(True)
-#    print("\n |__ LED status :", led) 
+if task == 1:
+   # ON
+   led = fp.set_led(True)
+   print("\n |__ LED status :", led) 
 
-#    time.sleep(2)
+   time.sleep(2)
 
-#    led = fp.set_led(False)
-#    print("\n |__ LED status :", led)
+   led = fp.set_led(False)
+   print("\n |__ LED status :", led)
      
 # # 2. check if finger is pressed or not
 # if task == 2:
