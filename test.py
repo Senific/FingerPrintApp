@@ -1,3 +1,4 @@
+import time
 from fplib import fplib
 
 # fingerprint module variables
@@ -17,7 +18,7 @@ if task == 1:
    led = fp.set_led(True)
    print("\n |__ LED status :", led) 
 
-   utime.sleep(2)
+   time.sleep(2)
 
    led = fp.set_led(False)
    print("\n |__ LED status :", led)
