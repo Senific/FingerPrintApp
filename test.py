@@ -46,8 +46,9 @@ try:
     time.sleep(0.1)
 
     # Clear HALT on endpoints
-    usb.util.clear_halt(dev, ep_out.bEndpointAddress)
-    usb.util.clear_halt(dev, ep_in.bEndpointAddress)
+    dev.clear_halt(ep_out.bEndpointAddress)
+    dev.clear_halt(ep_in.bEndpointAddress)
+
     time.sleep(0.1)
 
     print("Reset and Clear HALT done.\n")
