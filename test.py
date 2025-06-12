@@ -288,4 +288,22 @@ if __name__ == "__main__":
     print("\n--- FINAL CMD_USB_INTERNAL_CHECK AFTER TUR ---")
     send_cmd_usb_internal_check()
 
+    print("\n--- UFI CLEAR LOOP START ---")
+    for i in range(5):
+        print(f"\n--- UFI CLEAR LOOP ITERATION {i+1} ---")
+
+        send_test_unit_ready()
+
+        print("\n--- UFI LOOP REQUEST SENSE ---")
+        send_request_sense()
+
+        print("\nWaiting 200 ms...")
+        time.sleep(0.2)
+
+        print("\n--- CMD_USB_INTERNAL_CHECK in UFI LOOP ---")
+        send_cmd_usb_internal_check()
+
+        print("\nWaiting 200 ms...")
+        time.sleep(0.2)
+
     print("\n--- FLOW COMPLETE ---")
