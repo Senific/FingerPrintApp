@@ -348,7 +348,7 @@ class Fingerprint():
         return None, None
 
     def enroll(self, idx=None, try_cnt=10, sleep=1):
-        if idx >= 0:
+        if idx is not None and idx >= 0:
             # Check whether the finger already exists or not
             for i in range(try_cnt):
                 idx = self.identify()
