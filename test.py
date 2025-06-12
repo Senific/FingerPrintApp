@@ -2,6 +2,7 @@ import usb.core
 import usb.util
 import struct
 import time
+import random
 
 # --- Device constants ---
 VID = 0x2009
@@ -37,40 +38,64 @@ ep_in = usb.util.find_descriptor(
 print(f"Bulk OUT endpoint: 0x{ep_out.bEndpointAddress:02X}")
 print(f"Bulk IN endpoint: 0x{ep_in.bEndpointAddress:02X}")
 
-# --- USB Control Transfer to switch to FP mode ---
-print("Sending USB Control Transfer to switch to FP mode...")
-try:
-    dev.ctrl_transfer(0x21, 0x09, 0x0200, 0x0001, [0x01])
-    time.sleep(0.2)  # wait 200 ms
-    print("Control Transfer sent successfully.")
-except usb.core.USBError as e:
-    print(f"WARNING: Control transfer failed (may not be needed): {str(e)}")
+# --- CBW Builder ---
+def build_cbw(cdb, data_transfer_length):
+    """
+    Build CBW packet matching Demo Tool format.
+    """
+    CBW_SIGNATURE = b'USBS'
+    dCBWTag = random.randint(1, 0xFFFFFFFF)
+    dCBWDataTransferLength = data_transfer_length
+    bmCBWFlags = 0xEF  # Matches Demo Tool
+    bCBWLUN = 0
+    bCBWCBLength = 0x0D  # Matches Demo Tool (13 bytes)
 
-# --- Helper: send command ---
-def send_gt521f52_command(ep_out, ep_in, cmd, param=0):
-    print(f"\nSending CMD: 0x{cmd:04X}, Param: 0x{param:08X}")
+    # Pad CDB to 16 bytes
+    CBWCB = cdb + bytes(16 - len(cdb))
 
-    # Send CBW header (EF FE)
-    cbw_send = struct.pack('<4sIIIBB', b'USBC', 0x5355, 0, 12, 0xEF, 0xFE)
-    ep_out.write(cbw_send)
+    cbw_packet = struct.pack('<4sIIBBB', CBW_SIGNATURE, dCBWTag, dCBWDataTransferLength,
+                             bmCBWFlags, bCBWLUN, bCBWCBLength)
+    cbw_packet += CBWCB
 
-    # Build command packet
-    checksum = (cmd & 0xFFFF) + (param & 0xFFFF) + ((param >> 16) & 0xFFFF)
-    packet = struct.pack('<HHIHI', 0x55AA, cmd, param, checksum & 0xFFFF, 0)
+    return cbw_packet
 
-    # Send command packet
-    ep_out.write(packet)
+# --- Send CMD_OPEN ---
+def send_cmd_open():
+    print("\nSending CMD_OPEN...")
 
-    # Send second CBW header (EF FF)
-    cbw_send = struct.pack('<4sIIIBB', b'USBC', 0x5355, 0, 12, 0xEF, 0xFF)
-    ep_out.write(cbw_send)
+    # CDB for CMD_OPEN → EF FE → param = 00000001
+    cdb_cmd_open = struct.pack('<HHI', 0xAA55, 0x01, 0x00000001)
 
-    # Read response
+    # Add checksum + zero
+    checksum = (0x01 & 0xFFFF) + (0x00000001 & 0xFFFF) + ((0x00000001 >> 16) & 0xFFFF)
+    cdb_cmd_open += struct.pack('<HH', checksum & 0xFFFF, 0x0000)
+
+    # Build CBW packet for CMD_OPEN
+    cbw_cmd_open = build_cbw(cdb_cmd_open, 12)
+
+    # --- Send first CBW (EF FE) ---
+    print("Sending CBW (EF FE)...")
+    ep_out.write(cbw_cmd_open)
+
+    # --- Send Command Packet (12 bytes) ---
+    print("Sending Command Packet...")
+    ep_out.write(cdb_cmd_open)
+
+    # --- Send second CBW (EF FF) ---
+    print("Sending CBW (EF FF)...")
+    # Build second CBW with EF FF
+    cbw_cmd_open2 = build_cbw(cdb_cmd_open, 12)
+    # Change bmCBWFlags to 0xFF
+    cbw_cmd_open2 = cbw_cmd_open2[:12] + struct.pack('B', 0xFF) + cbw_cmd_open2[13:]
+    ep_out.write(cbw_cmd_open2)
+
+    # --- Read Response Packet ---
+    print("Reading Response Packet...")
     try:
         resp = ep_in.read(13, timeout=5000)
     except usb.core.USBError as e:
         print(f"USBError while reading response: {str(e)}")
-        return {'ACK': False, 'error': True}
+        return
 
     print(f"Response ({len(resp)} bytes):")
     print(' '.join(f"{b:02X}" for b in resp))
@@ -80,15 +105,7 @@ def send_gt521f52_command(ep_out, ep_in, cmd, param=0):
     param_returned = struct.unpack('<I', resp[8:12])[0]
     csw_status = resp[12]
 
-    result = {
-        'ACK': ack_nack == b'BS42',
-        'NACK': ack_nack != b'BS42',
-        'param': param_returned,
-        'csw_status': csw_status,
-        'error': False
-    }
-
-    if result['ACK']:
+    if ack_nack == b'BS42':
         print("ACK received.")
     else:
         print("NACK or unknown response.")
@@ -96,46 +113,10 @@ def send_gt521f52_command(ep_out, ep_in, cmd, param=0):
     print(f"Param: 0x{param_returned:08X}")
     print(f"CSW Status: {csw_status}")
 
-    return result
-
-# --- Safe Delete All ---
-def safe_delete_all(ep_out, ep_in):
-    print("[SAFE DELETE ALL] Starting safe delete sequence...")
-
-    # Step 1: Turn LED ON
-    print("Turning LED ON...")
-    resp = send_gt521f52_command(ep_out, ep_in, 0x12, 0x00000001)  # CMD_CMOS_LED_ON
-    time.sleep(0.1)
-
-    if not resp or resp.get('ACK') != True:
-        print("WARNING: LED ON may have failed — aborting delete.")
-        return
-
-    # Step 2: CMD_DELETE_ALL
-    print("Sending CMD_DELETE_ALL...")
-    resp = send_gt521f52_command(ep_out, ep_in, 0x41, 0x00000000)  # CMD_DELETE_ALL
-
-    if not resp or resp.get('ACK') != True:
-        print("ERROR: Delete all failed or returned NACK.")
-    else:
-        print("SUCCESS: All fingerprints deleted.")
-
-    # Step 3: Turn LED OFF
-    print("Turning LED OFF...")
-    send_gt521f52_command(ep_out, ep_in, 0x13, 0x00000000)  # CMD_CMOS_LED_OFF
-
-    print("[SAFE DELETE ALL] Done.\n")
-
 # --- Main flow ---
 print("\n--- STARTING TEST FLOW ---")
 
 # 1. CMD_OPEN
-send_gt521f52_command(ep_out, ep_in, 0x01, 0x00000001)  # CMD_OPEN
-
-# 2. Safe delete all
-safe_delete_all(ep_out, ep_in)
-
-# 3. CMD_CLOSE
-send_gt521f52_command(ep_out, ep_in, 0x02, 0x00000000)  # CMD_CLOSE
+send_cmd_open()
 
 print("\n--- TEST FLOW COMPLETE ---")
