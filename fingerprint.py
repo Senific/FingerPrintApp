@@ -20,6 +20,8 @@ class FingerprintScanner:
             if len(header) == 2 and header[0] == 0x55 and header[1] == 0xAA:
                 packet += header
                 break
+            else:
+                time.sleep(0.005)  # Sleep 5 ms between header retries
 
         # Step 2: Read the rest of the packet
         while len(packet) < expected_length:
@@ -31,6 +33,8 @@ class FingerprintScanner:
             chunk = self.ser.read(remaining)
             if chunk:
                 packet += chunk
+            else:
+                time.sleep(0.005)  # Sleep 5 ms between retries
 
         print(f"Resp: {packet.hex()}")
         return packet
@@ -67,6 +71,46 @@ class FingerprintScanner:
     def led_off(self):
         self.send_packet("55 AA 01 00 00 00 00 00 12 00 12 01")
 
+    def wait_for_finger_press(self, timeout=10, verbose=True):
+        # Auto LED ON first (matches Demo behavior)
+        self.led_on()
+        time.sleep(0.1)  # Give module time to light LED
+
+        if verbose:
+            print("Waiting for finger press...")
+
+        start_time = time.time()
+        while True:
+            resp = self.send_packet("55 AA 01 00 00 00 00 00 26 00 26 01", read_bytes=12)
+            resp_code, param = self.parse_response(resp)
+            if resp_code == 0x0030 and param == 1:
+                if verbose:
+                    print("Finger is pressed.")
+                break
+            if time.time() - start_time > timeout:
+                if verbose:
+                    print("Timeout waiting for finger press.")
+                break
+            time.sleep(0.1)
+
+    def wait_for_finger_release(self, timeout=10, verbose=True):
+        if verbose:
+            print("Waiting for finger release...")
+
+        start_time = time.time()
+        while True:
+            resp = self.send_packet("55 AA 01 00 00 00 00 00 26 00 26 01", read_bytes=12)
+            resp_code, param = self.parse_response(resp)
+            if resp_code == 0x0030 and param == 0:
+                if verbose:
+                    print("Finger is released.")
+                break
+            if time.time() - start_time > timeout:
+                if verbose:
+                    print("Timeout waiting for finger release.")
+                break
+            time.sleep(0.1)
+
     def capture(self):
         self.send_packet("55 AA 01 00 00 00 00 00 60 00 60 01")
 
@@ -101,40 +145,6 @@ class FingerprintScanner:
                 print(f"Unknown param: {param}")
         else:
             print(f"Unexpected response code: 0x{resp_code:04X}")
-
-    def wait_for_finger_press(self, timeout=10, verbose=True):
-        if verbose:
-            print("Waiting for finger press...")
-        start_time = time.time()
-        while True:
-            resp = self.send_packet("55 AA 01 00 00 00 00 00 26 00 26 01", read_bytes=12)
-            resp_code, param = self.parse_response(resp)
-            if resp_code == 0x0030 and param == 1:
-                if verbose:
-                    print("Finger is pressed.")
-                break
-            if time.time() - start_time > timeout:
-                if verbose:
-                    print("Timeout waiting for finger press.")
-                break
-            time.sleep(0.1)
-
-    def wait_for_finger_release(self, timeout=10, verbose=True):
-        if verbose:
-            print("Waiting for finger release...")
-        start_time = time.time()
-        while True:
-            resp = self.send_packet("55 AA 01 00 00 00 00 00 26 00 26 01", read_bytes=12)
-            resp_code, param = self.parse_response(resp)
-            if resp_code == 0x0030 and param == 0:
-                if verbose:
-                    print("Finger is released.")
-                break
-            if time.time() - start_time > timeout:
-                if verbose:
-                    print("Timeout waiting for finger release.")
-                break
-            time.sleep(0.1)
 
     def get_image(self):
         self.send_packet("55 AA 01 00 00 00 00 00 2A 00 2A 01")
