@@ -63,13 +63,19 @@ class FingerprintScanner:
     def get_template_count(self):
         resp = self.send_packet("55 AA 01 00 00 00 00 00 47 00 47 01")
         if len(resp) >= 12:
-            param_bytes = resp[4:8]
-            count = int.from_bytes(param_bytes, byteorder='little')
-            print(f"Template count: {count}")
-            return count
+            resp_code = resp[8] + (resp[9] << 8)
+            if resp_code == 0x3000:
+                param_bytes = resp[4:8]
+                count = int.from_bytes(param_bytes, byteorder='little')
+                print(f"Template count: {count}")
+                return count
+            else:
+                print(f"Warning: Unexpected response code: 0x{resp_code:04X}")
+                return None
         else:
             print("Invalid response length")
             return None
+
 
 
     def delete_id(self, enroll_id):
