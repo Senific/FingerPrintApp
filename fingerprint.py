@@ -63,22 +63,24 @@ class FingerprintScanner:
         self.parse_response(resp)
 
     def is_press_finger(self):
-        resp = self.send_packet("55 AA 01 00 00 00 00 00 26 00 26 01", read_bytes=1)
-        if len(resp) == 1:
-            if resp[0] == 0x01:
+        resp = self.send_packet("55 AA 01 00 00 00 00 00 26 00 26 01", read_bytes=12)
+        resp_code, param = self.parse_response(resp)
+        if resp_code == 0x0030:
+            if param == 1:
                 print("Finger is pressed.")
-            elif resp[0] == 0x00:
+            elif param == 0:
                 print("No finger pressed.")
             else:
-                print(f"Unknown response: {resp[0]}")
+                print(f"Unknown param: {param}")
         else:
-            print("Invalid response length")
+            print(f"Unexpected response code: 0x{resp_code:04X}")
 
     def wait_for_finger_press(self):
         print("Waiting for finger press...")
         while True:
-            resp = self.send_packet("55 AA 01 00 00 00 00 00 26 00 26 01", read_bytes=1)
-            if len(resp) == 1 and resp[0] == 0x01:
+            resp = self.send_packet("55 AA 01 00 00 00 00 00 26 00 26 01", read_bytes=12)
+            resp_code, param = self.parse_response(resp)
+            if resp_code == 0x0030 and param == 1:
                 print("Finger is pressed.")
                 break
             time.sleep(0.1)
@@ -86,8 +88,9 @@ class FingerprintScanner:
     def wait_for_finger_release(self):
         print("Waiting for finger release...")
         while True:
-            resp = self.send_packet("55 AA 01 00 00 00 00 00 26 00 26 01", read_bytes=1)
-            if len(resp) == 1 and resp[0] == 0x00:
+            resp = self.send_packet("55 AA 01 00 00 00 00 00 26 00 26 01", read_bytes=12)
+            resp_code, param = self.parse_response(resp)
+            if resp_code == 0x0030 and param == 0:
                 print("Finger is released.")
                 break
             time.sleep(0.1)
