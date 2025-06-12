@@ -63,8 +63,16 @@ class FingerprintScanner:
         self.parse_response(resp)
 
     def is_press_finger(self):
-        resp = self.send_packet("55 AA 01 00 00 00 00 00 26 00 26 01")
-        self.parse_response(resp)
+        resp = self.send_packet("55 AA 01 00 00 00 00 00 26 00 26 01", read_bytes=1)
+        if len(resp) == 1:
+            if resp[0] == 0x01:
+                print("Finger is pressed.")
+            elif resp[0] == 0x00:
+                print("No finger pressed.")
+            else:
+                print(f"Unknown response: {resp[0]}")
+        else:
+            print("Invalid response length")
 
     def get_image(self):
         self.send_packet("55 AA 01 00 00 00 00 00 2A 00 2A 01")
