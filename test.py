@@ -139,8 +139,8 @@ print("\n--- STARTING TEST FLOW ---")
 # UNCOMMENT ONE AT A TIME TO TEST WHICH ONE WORKS
 
 #send_vendor_switch(0x01)
-send_vendor_switch(0x02)
-# send_vendor_switch(0x03)
+# send_vendor_switch(0x02)
+send_vendor_switch(0x03)
 
 # Once you find which one works, keep only that one active.
 
