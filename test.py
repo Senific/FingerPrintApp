@@ -2,6 +2,7 @@ import os
 import fcntl
 import struct
 import ctypes
+import time
 
 # Constants
 SG_IO = 0x2285
@@ -151,6 +152,58 @@ def send_request_sense():
 
     os.close(fd)
 
+# Send MODE SENSE(6)
+def send_mode_sense6():
+    print("Sending MODE SENSE(6) via SG_IO...")
+
+    cdb = bytearray(6)
+    cdb[0] = 0x1A  # MODE SENSE(6)
+    cdb[2] = 0x3F  # All pages
+    cdb[4] = 0xC0  # Allocation length (192 bytes)
+
+    data_in_buffer = ctypes.create_string_buffer(192)
+    sense_buffer = ctypes.create_string_buffer(32)
+
+    hdr = sg_io_hdr()
+    hdr.interface_id = ord('S')
+    hdr.dxfer_direction = SG_DXFER_FROM_DEV
+    hdr.cmd_len = len(cdb)
+    hdr.mx_sb_len = len(sense_buffer)
+    hdr.iovec_count = 0
+    hdr.dxfer_len = len(data_in_buffer)
+    hdr.dxferp = ctypes.addressof(data_in_buffer)
+    hdr.cmdp = ctypes.addressof(ctypes.create_string_buffer(bytes(cdb)))
+    hdr.sbp = ctypes.addressof(sense_buffer)
+    hdr.timeout = 5000
+    hdr.flags = 0
+    hdr.pack_id = 0
+    hdr.usr_ptr = None
+    hdr.status = 0
+    hdr.masked_status = 0
+    hdr.msg_status = 0
+    hdr.sb_len_wr = 0
+    hdr.host_status = 0
+    hdr.driver_status = 0
+    hdr.resid = 0
+    hdr.duration = 0
+    hdr.info = 0
+
+    fd = os.open(DEV_PATH, os.O_RDWR)
+
+    try:
+        fcntl.ioctl(fd, SG_IO, hdr)
+        print("SG_IO ioctl sent successfully (MODE SENSE).")
+        print(f"SG_IO status: {hdr.status}, host_status: {hdr.host_status}, driver_status: {hdr.driver_status}")
+
+        mode_data = bytes(data_in_buffer)
+        print("MODE SENSE Data:")
+        print(' '.join(f'{b:02X}' for b in mode_data))
+
+    except Exception as e:
+        print(f"SG_IO ioctl failed (MODE SENSE): {str(e)}")
+
+    os.close(fd)
+
 # Main flow
 if __name__ == "__main__":
     print("--- FIRST CMD_USB_INTERNAL_CHECK ---")
@@ -159,7 +212,22 @@ if __name__ == "__main__":
     print("\n--- REQUEST SENSE ---")
     send_request_sense()
 
+    print("\nWaiting 200 ms...")
+    time.sleep(0.2)
+
     print("\n--- SECOND CMD_USB_INTERNAL_CHECK ---")
+    send_cmd_usb_internal_check()
+
+    print("\nWaiting 200 ms...")
+    time.sleep(0.2)
+
+    print("\n--- MODE SENSE(6) ---")
+    send_mode_sense6()
+
+    print("\nWaiting 200 ms...")
+    time.sleep(0.2)
+
+    print("\n--- THIRD CMD_USB_INTERNAL_CHECK ---")
     send_cmd_usb_internal_check()
 
     print("\n--- FLOW COMPLETE ---")
