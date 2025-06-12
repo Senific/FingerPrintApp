@@ -39,12 +39,12 @@ class FingerprintScanner:
         print(f"Resp: {packet.hex()}")
         return packet
 
-    def send_packet(self, packet_hex, read_bytes=12):
+    def send_packet(self, packet_hex, read_bytes=12, timeout_override=None):
         packet = bytes.fromhex(packet_hex)
         self.ser.write(packet)
         print(f"Sent: {packet_hex}")
         time.sleep(0.05)
-        return self.receive_packet(expected_length=read_bytes)
+        return self.receive_packet(expected_length=read_bytes, timeout=timeout_override if timeout_override is not None else 1.0)
 
     def parse_response(self, resp):
         if len(resp) < 12:
@@ -76,7 +76,7 @@ class FingerprintScanner:
         return self.parse_response(resp)
 
     def is_press_finger(self):
-        resp = self.send_packet("55 AA 01 00 00 00 00 00 26 00 26 01", read_bytes=12)
+        resp = self.send_packet("55 AA 01 00 00 00 00 00 26 00 26 01", read_bytes=12, timeout_override=10.0)
         resp_code, param = self.parse_response(resp)
         if resp_code is None:
             print("Failed to receive valid response.")
