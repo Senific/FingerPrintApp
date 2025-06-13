@@ -7,7 +7,10 @@ from kivy.uix.button import Button
 from kivy.app import App
 
 from employee_sync import RUNTIME_DIR , IMAGES_DIR, ENROLLMENTS_DIR
+from fplib import fplib
 
+# fingerprint module variables
+fp = fplib() 
 
 class EnrollScreen(Screen):
     def on_pre_enter(self):
@@ -78,6 +81,12 @@ class EnrollScreen(Screen):
 
     def start_enrollment(self, instance):
         print("Enrollment started...")
+        if fp.is_finger_pressed():
+            print("\n |__ Finger is pressed")
+            id, data, downloadstat = fp.enroll(idx=5)
+            print(f"\n |__ ID: {id} & is captured?", data is not None)
+            print(f"\n |__ enrolled count:", fp.get_enrolled_cnt())
+            fp.close()
 
     def mark(self, instance):
         app = App.get_running_app()
@@ -100,3 +109,5 @@ class EnrollScreen(Screen):
 
     def check_enrollment_status(self, emp_id: int) -> bool:
         return os.path.exists(os.path.join(ENROLLMENTS_DIR, f"{emp_id}.jpg"))
+    
+  

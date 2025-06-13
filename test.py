@@ -8,7 +8,7 @@ parser.add_argument('--task', type=int, required=True, help='Task number to run 
 args = parser.parse_args()
 
 # fingerprint module variables
-fp = fplib(port='/dev/serial0', baud=9600, timeout=3)  # Start at 9600
+fp = fplib()  # Start at 9600
 
 # module initializing
 init = fp.init()
@@ -51,14 +51,14 @@ if task == 4:
         print("\n |__ Finger is pressed")
         id, data, downloadstat = fp.enroll(idx=5)
         print(f"\n |__ ID: {id} & is captured?", data is not None)
-        print(f"\n |__ enrolled counts:", fp.get_enrolled_cnt())
+        print(f"\n |__ enrolled count:", fp.get_enrolled_cnt())
 
 # 5. delete saved template from device (delete all / delete by id)
 if task == 5:
     # status = fp.delete(idx=0)  # delete by id
     status = fp.delete()  # delete all
     print("\n |__ Delete status:", status)
-    print(f"\n |__ enrolled counts:", fp.get_enrolled_cnt())
+    print(f"\n |__ enrolled count:", fp.get_enrolled_cnt())
 
 # 6. identify / recognize fingerprint
 if task == 6:
@@ -87,4 +87,4 @@ if task == 8:
         print("Fetched template data:", img_arr)
 
 if task == 9:
-    print(f"\n |__ enrolled counts:", fp.get_enrolled_cnt())
+    print(f"\n |__ enrolled count:", fp.get_enrolled_cnt())

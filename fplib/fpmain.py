@@ -54,10 +54,16 @@ class Fingerprint():
     NACK = 0x31
 
 
-    def __init__(self, port, baud, timeout=1):
-        self.port = port
-        self.baud = baud
-        self.timeout = timeout
+    # def __init__(self,  port, baud, timeout=1):
+    #     self.port = port
+    #     self.baud = baud
+    #     self.timeout = timeout
+    #     self.ser = None
+
+    def __init__(self):
+        self.port = '/dev/serial0'
+        self.baud = 9600
+        self.timeout = 3
         self.ser = None
 
     def __del__(self):
