@@ -75,7 +75,7 @@ if task == 7:
 # 8. GetTemplateByID
 if task == 8:
     idx = int(input("Enter ID to get template: "))
-    data, ok = fp.GetTemplateByID(idx=idx)
+    data, ok = fp.GetTemplate(idx=idx)
     if not ok:
         print(f"Failed to get template for ID {idx}.")
     else:
