@@ -85,3 +85,6 @@ if task == 8:
         for ch in data:
             img_arr.append(ch)
         print("Fetched template data:", img_arr)
+
+if task == 9:
+    print(f"\n |__ enrolled counts:", fp.get_enrolled_cnt())
