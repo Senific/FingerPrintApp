@@ -355,75 +355,64 @@ class Fingerprint():
         return None, None
 
     def enroll(self, idx=None, try_cnt=10, sleep=1):
-        if idx is not None and idx >= 0:
+        if idx >= 0:
             # Check whether the finger already exists or not
             for i in range(try_cnt):
-                identified_id = self.identify()
-                print("Given id:", identified_id)
-                if identified_id is not None and identified_id == idx:
-                    print(f"Finger already enrolled as ID {identified_id}.")
-                    return -1, None, None
+                idx = self.identify()
+                print("Given id: ", idx)
+                if idx is not None:
+                    break
                 time.sleep(sleep)
                 logger.info("Checking existence...")
+            if idx is not None and idx >= 0:
+                return -1, None ,None
 
-        # Decide an ID for enrolling if not provided
-        if idx is None or idx < 0:
+            # Decide an ID for enrolling
             self.open()
             idx = self.get_enrolled_cnt()
+        logger.info("Enroll with the ID: %s" % idx)
 
-        logger.info(f"Enroll with the ID: {idx}")
-
-        # Start enrolling
+        """Start enrolling
+        """
         logger.info("Start enrolling...")
         cnt = 0
         while True:
+            # idx=0
             if self.start_enroll(idx):
+                # Enrolling started
                 break
             else:
                 cnt += 1
                 if cnt >= try_cnt:
-                    print(f"Failed to start enrollment for ID {idx}.")
-                    return -1, None, None
+                    return -1
                 time.sleep(sleep)
 
-        # Enroll steps 1 and 2
+        """Start enroll 1, 2, and 3
+        """
         for enr_num, enr in enumerate(["enroll1", "enroll2"]):
-            print(f"Start {enr}...")
+            print("Start %s..." % enr)
             cnt = 0
             while not self.capture_finger(best=True):
                 cnt += 1
                 if cnt >= try_cnt:
-                    print(f"Failed to capture finger for {enr}.")
-                    return -1, None, None
+                    return -1
                 time.sleep(sleep)
                 logger.info("Capturing a fingerprint...")
             cnt = 0
             while not getattr(self, enr)():
                 cnt += 1
                 if cnt >= try_cnt:
-                    print(f"Failed to execute {enr}.")
-                    return -1, None, None
+                    return -1
                 time.sleep(sleep)
                 logger.info("Enrolling the captured fingerprint...")
-
-        # Enroll step 3 (final merge & save)
+            
         if self.capture_finger(best=True):
             print("Start enroll3...")
             data, downloadstat = self.enroll3()
-
-            if downloadstat:
-                print(f"\n ✅ Enroll3 OK → ID {idx} saved successfully.")
-            else:
-                print(f"\n ⚠️ Enroll3 WARNING → ID {idx} may be saved with warnings (param != 0).")
-                print(" ⚠️ You should test Identify and CheckEnrolled to confirm.")
-
-            # Always return full result
-            return idx, data, downloadstat
-
-        # Final fallback → should not happen
-        print(f"\n ❌ Final capture before enroll3 failed for ID {idx}.")
-        return idx, None, False
-
+            if idx == -1:
+                return idx, data, downloadstat
+        # Enroll process finished
+        return idx, None, None
 
     def verifyTemplate(self, idx, data):
         data_bytes = bytearray()
