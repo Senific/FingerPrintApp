@@ -33,31 +33,17 @@ if task == 2:
 
 # 3. make fingerprint template
 if task == 3:
-    # data, downloadstat = fp.MakeTemplate()
-    # print(f"\n |__ Is template fetched?", downloadstat)
-
-    # img_arr = []
-    # if downloadstat:
-    #     data = bytearray(data)
-    #     for ch in data:
-    #         img_arr.append(ch)
-    # print("fetched template data:", img_arr)
-
-    # First MakeTemplate
     data, downloadstat = fp.MakeTemplate()
-    print("\n |__ Is template fetched?", downloadstat)
+    print(f"\n |__ Is template fetched?", downloadstat)
 
-    # Now if downloadstat == True → call GetTemplate
+    img_arr = []
     if downloadstat:
-        template_data, ok = fp.GetTemplate()
-        if ok:
-            img_arr = []
-            template_data = bytearray(template_data)
-            for ch in template_data:
-                img_arr.append(ch)
-            print("Fetched template data:", img_arr)
-        else:
-            print("Failed to fetch template data.")
+        data = bytearray(data)
+        for ch in data:
+            img_arr.append(ch)
+    print("fetched template data:", img_arr)
+
+
 
 # 4. enroll fingerprint to device memory
 if task == 4:
@@ -85,3 +71,17 @@ if task == 7:
     fp.delete(idx=0)
     status = fp.setTemplate(idx=0, data=DATA)
     print("\n |__ set template status:", status)
+
+# 8. GetTemplateByID
+if task == 8:
+    idx = int(input("Enter ID to get template: "))
+    data, ok = fp.GetTemplateByID(idx=idx)
+    if not ok:
+        print(f"Failed to get template for ID {idx}.")
+    else:
+        print(f"Fetched template for ID {idx} — length: {len(data)} bytes.")
+        img_arr = []
+        data = bytearray(data)
+        for ch in data:
+            img_arr.append(ch)
+        print("Fetched template data:", img_arr)

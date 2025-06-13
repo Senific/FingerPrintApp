@@ -439,8 +439,8 @@ class Fingerprint():
             return False
         return False
     
-    def GetTemplate(self):
-        if self._send_packet("GetTemplate"):
+    def GetTemplate(self, idx):
+        if self._send_packet("GetTemplate", param=idx):
             ack, param, res, data = self._read_packet()
             if not ack:
                 return None, False
