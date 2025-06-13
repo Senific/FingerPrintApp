@@ -1,4 +1,5 @@
 import os
+import time
 from kivy.uix.screenmanager import Screen
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.image import Image
@@ -81,12 +82,18 @@ class EnrollScreen(Screen):
 
     def start_enrollment(self, instance):
         print("Enrollment started...")
-        if fp.is_finger_pressed():
-            print("\n |__ Finger is pressed")
-            id, data, downloadstat = fp.enroll(idx=5)
-            print(f"\n |__ ID: {id} & is captured?", data is not None)
-            print(f"\n |__ enrolled count:", fp.get_enrolled_cnt())
-            fp.close()
+        
+        led = fp.set_led(True)
+        print("\n |__ LED status:", led)
+        time.sleep(2)
+        led = fp.set_led(False)
+        print("\n |__ LED status:", led)
+        # if fp.is_finger_pressed():
+        #     print("\n |__ Finger is pressed")
+        #     id, data, downloadstat = fp.enroll(idx=5)
+        #     print(f"\n |__ ID: {id} & is captured?", data is not None)
+        #     print(f"\n |__ enrolled count:", fp.get_enrolled_cnt())
+        #     fp.close()
 
     def mark(self, instance):
         app = App.get_running_app()
