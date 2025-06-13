@@ -33,15 +33,31 @@ if task == 2:
 
 # 3. make fingerprint template
 if task == 3:
-    data, downloadstat = fp.MakeTemplate()
-    print(f"\n |__ Is template fetched?", downloadstat)
+    # data, downloadstat = fp.MakeTemplate()
+    # print(f"\n |__ Is template fetched?", downloadstat)
 
-    img_arr = []
+    # img_arr = []
+    # if downloadstat:
+    #     data = bytearray(data)
+    #     for ch in data:
+    #         img_arr.append(ch)
+    # print("fetched template data:", img_arr)
+
+    # First MakeTemplate
+    data, downloadstat = fp.MakeTemplate()
+    print("\n |__ Is template fetched?", downloadstat)
+
+    # Now if downloadstat == True → call GetTemplate
     if downloadstat:
-        data = bytearray(data)
-        for ch in data:
-            img_arr.append(ch)
-    print("fetched template data:", img_arr)
+        template_data, ok = fp.GetTemplate()
+        if ok:
+            img_arr = []
+            template_data = bytearray(template_data)
+            for ch in template_data:
+                img_arr.append(ch)
+            print("Fetched template data:", img_arr)
+        else:
+            print("Failed to fetch template data.")
 
 # 4. enroll fingerprint to device memory
 if task == 4:
