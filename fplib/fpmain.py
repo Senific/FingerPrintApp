@@ -313,7 +313,7 @@ class Fingerprint():
     
     def MakeTemplate(self):
         if not self.capture_finger(best=True):
-            return None
+            return None, False
         if self._send_packet("MakeTemplate"):
             ack, param, res, data = self._read_packet()
             if not ack:
