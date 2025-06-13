@@ -96,7 +96,7 @@ class EnrollScreen(Screen):
         # if not emp or not emp.get('Identifiers'):
         #     print("No Identifiers found for this employee.")
         #     return
-
+ 
         identifiers = "1,2,3".split(",")  # test with many buttons
 
         count = len(identifiers)
@@ -112,6 +112,8 @@ class EnrollScreen(Screen):
 
         for identifier in identifiers:
             btn = Button(text=f"{identifier}", size_hint_y=None, height=50)
+            if fp.CheckEnrolled(identifier):
+                btn.background_color = (0,1,0,1)
             btn.bind(on_release=partial(self.identifier_selected, identifier))
             grid.add_widget(btn)
 
