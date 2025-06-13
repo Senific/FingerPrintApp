@@ -45,10 +45,11 @@ def get_api_config():
 
 
 class Employee:
-    def __init__(self, ID, Name, Code, Description):
+    def __init__(self, ID, Name, Code, Identifiers, Description):
         self.ID = ID
         self.Name = Name
         self.Code = Code
+        self.Identifiers = Identifiers
         self.Description = Description
 
 
@@ -65,6 +66,7 @@ class EmployeeDatabase:
                     ID INTEGER PRIMARY KEY,
                     Name TEXT,
                     Code TEXT,
+                    Identifiers TEXT,
                     Description TEXT
                 )
             ''')
@@ -335,7 +337,7 @@ class EmployeeSync:
                 await self.db.delete_employee(emp_id)
                 self.delete_employee_image(emp_id)
             else:
-                employee = Employee(emp_id, emp["Name"], emp["Code"], emp["Description"])
+                employee = Employee(emp_id, emp["Name"], emp["Code"], emp["Identifiers"], emp["Description"])
                 await self.db.upsert_employee(employee)
                 await self.download_employee_image(emp_id)
 

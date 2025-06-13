@@ -88,3 +88,10 @@ if task == 8:
 
 if task == 9:
     print(f"\n |__ enrolled count:", fp.get_enrolled_cnt())
+
+    # 9. List all enrolled IDs
+if task == 10:  
+    idx = int(input("Enter ID to check enrollment"))
+    print("\n |__ Check ID ", idx) 
+    enrolled = fp.CheckEnrolled(idx)
+    print("\n |__ Enrolled :", enrolled)

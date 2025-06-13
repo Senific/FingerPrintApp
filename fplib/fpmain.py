@@ -493,4 +493,11 @@ class Fingerprint():
             return -1
         return None
 
-            
+    def CheckEnrolled(self, idx):
+        if self._send_packet("CheckEnrolled", param=idx):
+            ack, param, res, data = self._read_packet()
+            if not ack:
+                return False
+            return param != 0  # param == 1 → enrolled
+        else:
+            return False

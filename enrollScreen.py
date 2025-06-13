@@ -1,19 +1,25 @@
 import os
 import time
+import math
+from functools import partial
 from kivy.uix.screenmanager import Screen
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.image import Image
 from kivy.uix.label import Label
 from kivy.uix.button import Button
+from kivy.uix.popup import Popup
+from kivy.uix.gridlayout import GridLayout
+from kivy.uix.scrollview import ScrollView
 from kivy.app import App
 
-from employee_sync import RUNTIME_DIR , IMAGES_DIR, ENROLLMENTS_DIR
+from employee_sync import RUNTIME_DIR, IMAGES_DIR, ENROLLMENTS_DIR
 from fplib import fplib
 
 # fingerprint module variables
-fp = fplib() 
+fp = fplib()
 init = fp.init()
 print("is initialized:", init)
+
 
 class EnrollScreen(Screen):
     def on_pre_enter(self):
@@ -28,6 +34,9 @@ class EnrollScreen(Screen):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+        self.selected_identifier = None
+        self.enroll_popup = None
 
         root_layout = BoxLayout(orientation='vertical', padding=20, spacing=20)
 
@@ -70,7 +79,7 @@ class EnrollScreen(Screen):
         self.back_button = Button(text="Back", size_hint=(0.3, 1))
 
         self.enroll_button.bind(on_release=self.start_enrollment)
-        self.mark_button.bind(on_release=self.mark);
+        self.mark_button.bind(on_release=self.mark)
         self.back_button.bind(on_release=self.go_back)
 
         footer_layout.add_widget(self.enroll_button)
@@ -83,25 +92,75 @@ class EnrollScreen(Screen):
         self.add_widget(root_layout)
 
     def start_enrollment(self, instance):
+        emp = App.get_running_app().employee_to_enroll
+        # if not emp or not emp.get('Identifiers'):
+        #     print("No Identifiers found for this employee.")
+        #     return
+
+        identifiers = "1,2,3".split(",")  # test with many buttons
+
+        count = len(identifiers)
+
+        # Smart columns: square root logic
+        columns = max(1, math.ceil(math.sqrt(count)))
+
+        print(f"Identifiers count = {count}, smart columns = {columns}")
+
+        # Build GridLayout
+        grid = GridLayout(cols=columns, spacing=10, padding=10, size_hint_y=None)
+        grid.bind(minimum_height=grid.setter('height'))
+
+        for identifier in identifiers:
+            btn = Button(text=f"{identifier}", size_hint_y=None, height=50)
+            btn.bind(on_release=partial(self.identifier_selected, identifier))
+            grid.add_widget(btn)
+
+        # Wrap in ScrollView
+        scrollview = ScrollView(size_hint=(1, 1))
+        scrollview.add_widget(grid)
+
+        # Create full content layout (ScrollView + Cancel button)
+        popup_layout = BoxLayout(orientation='vertical', spacing=10, padding=10)
+        popup_layout.add_widget(scrollview)
+
+        # Cancel button pinned at bottom
+        close_btn = Button(text="Cancel", size_hint=(1, None), height=50)
+        close_btn.bind(on_release=lambda instance: self.enroll_popup.dismiss())
+        popup_layout.add_widget(close_btn)
+
+        # Create Popup
+        self.enroll_popup = Popup(title="Select Identifier to Enroll",
+                                  content=popup_layout,
+                                  size_hint=(0.8, 0.8),
+                                  auto_dismiss=False)
+
+        # Open popup
+        self.enroll_popup.open()
+
+    def identifier_selected(self, identifier, instance=None):
+        print(f"Selected Identifier: {identifier}")
+        self.selected_identifier = identifier
+        self.enroll_popup.dismiss()
+
+        # Now proceed with Enrollment logic using selected_identifier
         print("Enrollment started...")
-        
+
         led = fp.set_led(True)
         print("\n |__ LED status:", led)
         time.sleep(2)
         led = fp.set_led(False)
         print("\n |__ LED status:", led)
+
+        # Example - You can pass this identifier to enroll:
+        # id, data, downloadstat = fp.enroll(idx=int(identifier))
+        # print(f"\n |__ ID: {id} & is captured?", data is not None)
+
         fp.close()
-        # if fp.is_finger_pressed():
-        #     print("\n |__ Finger is pressed")
-        #     id, data, downloadstat = fp.enroll(idx=5)
-        #     print(f"\n |__ ID: {id} & is captured?", data is not None)
-        #     print(f"\n |__ enrolled count:", fp.get_enrolled_cnt())
-        #     fp.close()
 
     def mark(self, instance):
         app = App.get_running_app()
-        app.employee_to_enroll =  App.get_running_app().employee_to_enroll
-        app.markAttendancePrevious_screen = "enroll"  
+        app.employee_to_enroll = App.get_running_app().employee_to_enroll
+        app.markAttendancePrevious_screen = "enroll"
         self.manager.current = "mark"
 
     def go_back(self, instance):
@@ -109,7 +168,6 @@ class EnrollScreen(Screen):
         if self.manager:
             target = getattr(app, 'previous_screen', 'main')  # default to 'main'
             self.manager.current = target
-
 
     def set_employee_details(self, image_path, name, code, enrolled):
         self.employee_image.source = image_path
@@ -119,5 +177,3 @@ class EnrollScreen(Screen):
 
     def check_enrollment_status(self, emp_id: int) -> bool:
         return os.path.exists(os.path.join(ENROLLMENTS_DIR, f"{emp_id}.jpg"))
-    
-  
