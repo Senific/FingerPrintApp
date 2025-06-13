@@ -49,7 +49,7 @@ if task == 3:
 if task == 4:
     if fp.is_finger_pressed():
         print("\n |__ Finger is pressed")
-        id, data, downloadstat = fp.enroll(idx=5)
+        id, data, downloadstat = fp.enroll()
         print(f"\n |__ ID: {id} & is captured?", data is not None)
         print(f"\n |__ enrolled count:", fp.get_enrolled_cnt())
 
