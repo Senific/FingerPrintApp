@@ -359,7 +359,7 @@ class Fingerprint():
                 time.sleep(sleep)
                 logger.info("Checking existence...")
             if idx is not None and idx >= 0:
-                return -1
+                return -1, None ,None
 
             # Decide an ID for enrolling
             self.open()
