@@ -438,7 +438,17 @@ class Fingerprint():
                 return False
             return False
         return False
-       
+    
+    def GetTemplate(self):
+        if self._send_packet("GetTemplate"):
+            ack, param, res, data = self._read_packet()
+            if not ack:
+                return None, False
+            return data, True if param == 0 else False
+        else:
+            return None, False
+
+
     def delete(self, idx=None):
         res = None
         if idx == None:
