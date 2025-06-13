@@ -12,6 +12,8 @@ from fplib import fplib
 
 # fingerprint module variables
 fp = fplib() 
+init = fp.init()
+print("is initialized:", init)
 
 class EnrollScreen(Screen):
     def on_pre_enter(self):
@@ -88,6 +90,7 @@ class EnrollScreen(Screen):
         time.sleep(2)
         led = fp.set_led(False)
         print("\n |__ LED status:", led)
+        fp.close()
         # if fp.is_finger_pressed():
         #     print("\n |__ Finger is pressed")
         #     id, data, downloadstat = fp.enroll(idx=5)
