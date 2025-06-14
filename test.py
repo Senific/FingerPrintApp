@@ -52,6 +52,11 @@ if task == 4:
         id, data, downloadstat = fp.enroll()
         print(f"\n |__ ID: {id} & is captured?", data is not None)
         print(f"\n |__ enrolled count:", fp.get_enrolled_cnt())
+        # Immediately verify the template is actually stored
+        print(f"[DEBUG] Enrolled count after enroll: {fp.get_enrolled_cnt()}")
+        data, ok = fp.GetTemplate(id)
+        print(f"[DEBUG] Template fetch right after enroll: {'✅ Success' if ok and data and len(data) > 0 else '❌ Failed'}")
+
 
 # 5. delete saved template from device (delete all / delete by id)
 if task == 5:

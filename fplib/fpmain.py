@@ -346,10 +346,15 @@ class Fingerprint():
     def enroll3(self):
         if self._send_packet("Enroll3"):
             ack, param, res, data = self._read_packet()
-            if not ack:
-                return None, False
-            return data, True  if param == 0 else False
-        return None, None
+            logger.debug(f"[Enroll3] ack={ack}, param={hex(param)}, res={hex(res)}")
+            # Must return ack=True and param==0 to be valid
+            if ack and param == 0:
+                return data, True
+            else:
+                logger.warning("⚠️ Enroll3 failed or partial.")
+                return data, False
+        return None, False
+
 
     def enroll(self, idx=None, try_cnt=10, sleep=1):
         def wait_finger_removed(max_wait=10):
