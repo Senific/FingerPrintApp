@@ -353,73 +353,89 @@ class Fingerprint():
 
     def enroll(self, idx=None, try_cnt=10, sleep=1):
         def wait_finger_removed(max_wait=10):
-            waited = 0
-            while self.is_finger_pressed():
-                logger.info("🖐 Please remove finger...")
-                time.sleep(1)
-                waited += 1
-                if waited >= max_wait:
-                    logger.warning("⚠️ Finger not removed after 10s — continuing anyway.")
-                    break
+            for _ in range(max_wait):
+                if not self.is_finger_pressed():
+                    return True
+                time.sleep(0.5)
+            logger.warning("Timeout waiting for finger removal.")
+            return False
 
+        # Decide ID to use
         if idx is None or idx < 0:
             self.open()
             idx = self.get_enrolled_cnt()
 
         logger.info(f"🔐 Starting enrollment for ID: {idx}")
 
-        # Step 1: Start enrollment
-        for attempt in range(try_cnt):
+        # Start Enroll
+        for _ in range(try_cnt):
             if self.start_enroll(idx):
                 logger.info("✅ EnrollStart successful")
                 break
             time.sleep(sleep)
         else:
-            logger.error(f"❌ Failed to start enrollment for ID {idx}")
+            logger.error("❌ EnrollStart failed after retries")
             return -1, None, None
 
-        # Steps 2 & 3: enroll1 and enroll2
-        for step, method in enumerate(["enroll1", "enroll2"], start=1):
-            logger.info(f"➡️ Step {step}: Place finger for {method}...")
-
-            # Wait for valid capture
-            for attempt in range(try_cnt):
-                if self.capture_finger(best=True):
-                    logger.info(f"✅ Finger captured for {method}")
+        # Step 1: Capture and Enroll1
+        logger.info("➡️ Step 1: Place finger for enroll1...")
+        for _ in range(try_cnt):
+            if self.capture_finger(best=True):
+                logger.info("✅ Finger captured for enroll1")
+                if self.enroll1():
+                    logger.info("✅ enroll1 succeeded")
                     break
-                time.sleep(sleep)
-            else:
-                logger.error(f"❌ Failed to capture finger for {method}")
-                return -1, None, None
+            time.sleep(sleep)
+        else:
+            logger.error("❌ Failed enroll1 after retries")
+            return -1, None, None
 
-            # Run enroll step
-            for attempt in range(try_cnt):
-                if getattr(self, method)():
-                    logger.info(f"✅ {method} succeeded")
+        # Wait for finger removal
+        logger.info("🖐 Please remove finger...")
+        wait_finger_removed()
+        time.sleep(0.5)
+
+        # Step 2: Capture and Enroll2
+        logger.info("➡️ Step 2: Place finger for enroll2...")
+        for _ in range(try_cnt):
+            if self.capture_finger(best=True):
+                logger.info("✅ Finger captured for enroll2")
+                if self.enroll2():
+                    logger.info("✅ enroll2 succeeded")
                     break
-                time.sleep(sleep)
-            else:
-                logger.error(f"❌ {method} failed")
-                return -1, None, None
+            time.sleep(sleep)
+        else:
+            logger.error("❌ Failed enroll2 after retries")
+            return -1, None, None
 
-            # Require finger removal before next step
-            wait_finger_removed()
+        # Wait for finger removal
+        logger.info("🖐 Please remove finger...")
+        wait_finger_removed()
+        time.sleep(0.5)
 
-        # Step 4: enroll3
+        # Final Step 3: Capture and Enroll3
         logger.info("➡️ Final step: Place finger again for enroll3...")
-
-        for attempt in range(try_cnt):
+        for _ in range(try_cnt):
             if self.capture_finger(best=True):
                 data, ok = self.enroll3()
+                print(f"[DEBUG] Enroll3 → OK: {ok}, Data Length: {len(data) if data else 0}")
                 if ok:
                     logger.info(f"🎉 Enroll3 succeeded — ID {idx} saved.")
-                else:
-                    logger.warning(f"⚠️ Enroll3 WARNING: ID {idx} may not be saved correctly.")
-                return idx, data, ok
+                    break
             time.sleep(sleep)
+        else:
+            logger.error("❌ Failed enroll3 after retries")
+            return -1, None, None
 
-        logger.error(f"❌ Final capture failed for enroll3 — ID {idx} not saved.")
-        return idx, None, False
+        time.sleep(1.0)  # Let device save the template
+
+        # Final Check — validate saved template
+        count = self.get_enrolled_cnt()
+        logger.info(f"[DEBUG] Enrolled count after enroll: {count}")
+        _, ok2 = self.GetTemplate(idx)
+        logger.info(f"[DEBUG] Template fetch right after enroll: {'✅ Success' if ok2 else '❌ Fail'}")
+
+        return idx, data, ok2
 
     
     def verifyTemplate(self, idx, data):
