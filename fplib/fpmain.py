@@ -495,26 +495,13 @@ class Fingerprint():
     def CheckEnrolled(self, idx):
         if self._send_packet("CheckEnrolled", param=idx):
             ack, param, res, data = self._read_packet()
-            
-            if ack:
-                # ACK → param = 1 means enrolled
-                return param != 0
-            else:
-                # NACK → param = NACK error code
-                # Special case: NACK_IS_NOT_USED → ID not enrolled
-                if param == 0x1004:
-                    print(f"❌ CheckEnrolled: ID {idx} is NOT enrolled (NACK_IS_NOT_USED).")
-                    return False
-                else:
-                    # Other NACK → unexpected error → show message
-                    if hasattr(self, "DisplayErr"):
-                        self.DisplayErr(param)
-                    else:
-                        print(f"❌ CheckEnrolled: NACK error 0x{param:X} for ID {idx}.")
-                    return False
+            print(f"DEBUG: ack={ack}, param=0x{param:X}, res=0x{res:X}")  # Add this line
+            if not ack:
+                return False
+            return param != 0  # param == 1 → enrolled
         else:
-            print("❌ Failed to send CheckEnrolled command.")
             return False
+
 
 
     def DisplayErr(self, nack_code):
