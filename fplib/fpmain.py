@@ -418,29 +418,31 @@ class Fingerprint():
         wait_finger_removed()
         time.sleep(0.5)
 
-        # Final Step 3: Capture and Enroll3
-        logger.info("➡️ Final step: Place finger again for enroll3...")
-        for _ in range(try_cnt):
-            if self.capture_finger(best=True):
-                data, ok = self.enroll3()
-                print(f"[DEBUG] Enroll3 → OK: {ok}, Data Length: {len(data) if data else 0}")
-                if ok:
-                    logger.info(f"🎉 Enroll3 succeeded — ID {idx} saved.")
-                    break
-            time.sleep(sleep)
-        else:
-            logger.error("❌ Failed enroll3 after retries")
-            return -1, None, None
+        # Enroll step 3 (final merge & save)
+        if self.capture_finger(best=True):
+            print("[Fingerprint] ➡️ Final step: Place finger again for enroll3...")
+            data, downloadstat = self.enroll3()
 
-        time.sleep(1.0)  # Let device save the template
+            if downloadstat and data and len(data) >= 498:
+                print(f"[DEBUG] Enroll3 → OK: True, Data Length: {len(data)}")
+                logger.info(f"🎉 Enroll3 succeeded — ID {idx} saved.")
 
-        # Final Check — validate saved template
-        count = self.get_enrolled_cnt()
-        logger.info(f"[DEBUG] Enrolled count after enroll: {count}")
-        _, ok2 = self.GetTemplate(idx)
-        logger.info(f"[DEBUG] Template fetch right after enroll: {'✅ Success' if ok2 else '❌ Fail'}")
+                # Verify ID is enrolled
+                enrolled = self.CheckEnrolled(idx)
+                logger.debug(f"[DEBUG] Enrolled check post-enroll: {enrolled}")
+                if not enrolled:
+                    logger.warning(f"[WARN] Device didn't confirm enrollment of ID {idx}.")
+                    return idx, data, False
 
-        return idx, data, ok2
+                # Check actual template
+                templ, ok = self.GetTemplate(idx)
+                logger.debug(f"[DEBUG] Template fetch right after enroll: {'✅ Success' if ok and templ and len(templ) > 0 else '❌ Failed'}")
+                return idx, data, ok
+
+            else:
+                print(f"[DEBUG] Enroll3 → OK: {downloadstat}, Data Length: {len(data) if data else 0}")
+                logger.warning(f"[WARN] Enroll3 completed but template data invalid for ID {idx}.")
+                return idx, data, False
 
     
     def verifyTemplate(self, idx, data):
