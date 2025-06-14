@@ -93,5 +93,5 @@ if task == 9:
 if task == 10:  
     idx = int(input("Enter ID to check enrollment: "))
     print("\n |__ Check ID ", idx) 
-    enrolled = fp.CheckEnrolled(idx)
+    enrolled = fp.CheckEnrolled(int(idx))
     print("\n |__ Enrolled :", enrolled)
