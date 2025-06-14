@@ -95,3 +95,19 @@ if task == 10:
     print("\n |__ Check ID ", idx) 
     enrolled = fp.CheckEnrolled(int(idx))
     print("\n |__ Enrolled :", enrolled)
+
+
+
+# 99. Fully inspect an ID
+if task == 99:
+    idx = int(input("Enter ID to inspect: "))
+    print(f"\n |__ Inspecting ID {idx}")
+
+    enrolled = fp.CheckEnrolled(idx)
+    print(f"\n |__ CheckEnrolled: {enrolled}")
+
+    data, ok = fp.GetTemplate(idx)
+    print(f"\n |__ GetTemplate OK: {ok}, Length: {len(data) if data else 0}")
+
+    if data:
+        print(f" |__ Data (first 10 bytes): {list(data[:10])}")
