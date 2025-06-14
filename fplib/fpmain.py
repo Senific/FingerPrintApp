@@ -190,9 +190,8 @@ class Fingerprint():
 
     def _read_packet(self, wait=True):
         """
-
         :param wait:
-        :return: ack, param, res, data
+        :return: ack (bool), nack_code_or_param (int), res (int), data (bytes)
         """
         # Read response packet
         packet = bytearray(12)
@@ -210,45 +209,43 @@ class Fingerprint():
         p = self.ser.read(10)
         packet[2:12] = p[:]
 
-        # Parse ACK
-        ack = True if packet[8] == Fingerprint.ACK else False
+        # Parse ACK or NACK
+        ack_code = packet[8]
+        ack = True if ack_code == Fingerprint.ACK else False
 
-        # Parse parameter
+        # Parse parameter (NACK code or parameter value)
         param = bytearray(4)
         param[:] = packet[4:8]
-        if param is not None:
-            param = int(codecs.encode(param[::-1], 'hex_codec'), 16)
+        param_val = int(codecs.encode(param[::-1], 'hex_codec'), 16)
 
-        # Parse response
+        # Parse response code (0x30 or 0x31)
         res = bytearray(2)
         res[:] = packet[8:10]
-        if res is not None:
-            res = int(codecs.encode(res[::-1], 'hex_codec'), 16)
+        res_val = int(codecs.encode(res[::-1], 'hex_codec'), 16)
 
-        # Read data packet
+        # Read data packet (if present)
         data = None
         if self.ser and self.ser.readable() and self.ser.inWaiting() > 0:
             firstbyte, secondbyte = self._read_header()
             if firstbyte and secondbyte:
-                # Data exists.
                 if firstbyte == Fingerprint.PACKET_DATA_0 and secondbyte == Fingerprint.PACKET_DATA_1:
                     print(">> Data exists...")
-                    # print("FB-SB: ", firstbyte, secondbyte)
                     data = bytearray()
                     data.append(firstbyte)
                     data.append(secondbyte)
-        read_buffer = b''                    
+
+        read_buffer = b''
         if data:
             while True:
                 chunk_size = 14400
                 p = self.ser.read(size=chunk_size)
                 read_buffer += p
-                # print(p, type(p))
                 if len(p) == 0:
                     print(">> Transmission Completed . . .")
                     break
 
-        return ack, param, res, read_buffer
+        return ack, param_val, res_val, read_buffer
+
 
     def open(self):
         if self._send_packet("Open"):
@@ -494,12 +491,43 @@ class Fingerprint():
                 return param
             return -1
         return None
-
+ 
     def CheckEnrolled(self, idx):
         if self._send_packet("CheckEnrolled", param=idx):
             ack, param, res, data = self._read_packet()
             if not ack:
+                self.DisplayErr(param)
                 return False
             return param != 0  # param == 1 → enrolled
         else:
             return False
+
+
+    def DisplayErr(self, nack_code):
+        NACK_ERRORS = {
+            0x1001: "Timeout",
+            0x1002: "Invalid baudrate",
+            0x1003: "Invalid ID",
+            0x1004: "ID is not used",
+            0x1005: "ID is already used",
+            0x1006: "Communication error",
+            0x1007: "Verify failed",
+            0x1008: "Identify failed",
+            0x1009: "Database is full",
+            0x100A: "Database is empty",
+            0x100B: "Enroll order error",
+            0x100C: "Bad finger",
+            0x100D: "Enroll failed",
+            0x100E: "Command not supported",
+            0x100F: "Device error",
+            0x1010: "Capture canceled",
+            0x1011: "Invalid parameter",
+            0x1012: "Finger not pressed",
+            0x1013: "RAM error",
+            0x1014: "Template capacity full",
+            0x1015: "Command no support",
+        }
+        if nack_code in NACK_ERRORS:
+            print(f"❌ NACK: {NACK_ERRORS[nack_code]} (0x{nack_code:X})")
+        else:
+            print(f"❌ NACK: Unknown error code (0x{nack_code:X})")
