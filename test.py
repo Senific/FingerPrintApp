@@ -100,7 +100,7 @@ if task == 10:
 
 # 99. Fully inspect an ID
 if task == 99:
-    idx = int(input("Enter ID to inspect: "))
+    idx = int(input("Enter ID to check inspect: ")) 
     print(f"\n |__ Inspecting ID {idx}")
 
     enrolled = fp.CheckEnrolled(idx)
