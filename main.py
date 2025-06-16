@@ -1,7 +1,5 @@
 import os
-import logging
-
-import fplib
+import logging 
 
 # Suppress overly verbose httpx/httpcore debug logs
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -167,11 +165,11 @@ class BackgroundFingerWaitThread(threading.Thread):
 
 
 if __name__ == "__main__": 
-    try:
-        sync_thread = BackgroundSyncThread()
-        sync_thread.start()  
-    except Exception as e:
-        logging.error(f"Background sync failed to start: {e}")
+    # try:
+    #     sync_thread = BackgroundSyncThread()
+    #     sync_thread.start()  
+    # except Exception as e:
+    #     logging.error(f"Background sync failed to start: {e}")
 
 
     # try: 
