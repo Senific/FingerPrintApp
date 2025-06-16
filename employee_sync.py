@@ -6,12 +6,19 @@ import json
 from urllib.parse import quote
 from cryptography.fernet import Fernet
 from datetime import datetime, timedelta
+from apiUtill import ApiUtils
+from fplib import fplib
+from helper import HelperUtils
+
+# fingerprint module variables
+fp = fplib()
+init = fp.init()
+print("is initialized:", init)
 
 # 🔧 Constants
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 RUNTIME_DIR = os.path.join(BASE_DIR, "RuntimeResources")
-IMAGES_DIR = os.path.join(RUNTIME_DIR, "Images")
-ENROLLMENTS_DIR = os.path.join(RUNTIME_DIR, "Enrollments")
+IMAGES_DIR = os.path.join(RUNTIME_DIR, "Images") 
 SETTINGS_FILE = os.path.join(RUNTIME_DIR, "settings.txt")
 FERNET_KEY_FILE = os.path.join(RUNTIME_DIR, "fernet.key") 
 DB_FILE = os.path.join(RUNTIME_DIR, "employees.db")
@@ -19,8 +26,7 @@ LAST_SYNC_FILE = os.path.join(RUNTIME_DIR, "last_sync.txt")
 SECONDARY_SETTINGS_FILE = os.path.join(RUNTIME_DIR, "SecondarySettings.txt")
 
 os.makedirs(RUNTIME_DIR, exist_ok=True)
-os.makedirs(IMAGES_DIR, exist_ok=True)
-os.makedirs(ENROLLMENTS_DIR, exist_ok=True)
+os.makedirs(IMAGES_DIR, exist_ok=True) 
 
 # 🔐 Fernet Key Loader
 def get_fernet():
@@ -87,13 +93,14 @@ class EmployeeDatabase:
     async def upsert_employee(self, emp: Employee):
         async with aiosqlite.connect(self.db_path) as db:
             await db.execute('''
-                INSERT INTO Employees (ID, Name, Code, Description)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO Employees (ID, Name, Code,Identifiers, Description)
+                VALUES (?, ?, ?, ?, ?)
                 ON CONFLICT(ID) DO UPDATE SET
                     Name=excluded.Name,
                     Code=excluded.Code,
+                    Identifiers=excluded.Identifiers,
                     Description=excluded.Description
-            ''', (emp.ID, emp.Name, emp.Code, emp.Description))
+            ''', (emp.ID, emp.Name, emp.Code, emp.Identifiers, emp.Description))
             await db.commit()
 
     async def delete_employee(self, emp_id: int):
@@ -101,15 +108,21 @@ class EmployeeDatabase:
             await db.execute("DELETE FROM Employees WHERE ID=?", (emp_id,))
             await db.commit()
 
-
+    async def get_employee(self, emp_id: int):
+        async with aiosqlite.connect(self.db_path) as db:
+            cursor = await db.execute("SELECT * FROM Employees WHERE ID = ?", (emp_id,))
+            row = await cursor.fetchone()
+            await cursor.close()
+            return row   
+        
 class EmployeeSync:
-    def __init__(self, db, sync_file=None):
+    def __init__(self, db: EmployeeDatabase, sync_file=None):
         config = get_api_config()
         self.username = config["username"]
         self.password = config["password"]
         self.system_code = config["system_code"]
         self.api_url = config["api_url"]
-        self.db = db
+        self.db: EmployeeDatabase = db
         self.sync_file = sync_file or LAST_SYNC_FILE
         self.token = None
         self.client = httpx.AsyncClient()
@@ -140,11 +153,7 @@ class EmployeeSync:
         self.token = await EmployeeSync.get_token(
             self.username, self.password, self.system_code, self.api_url
         )
-
-    @staticmethod
-    def has_enrollment_image(emp_id: int) -> bool:
-        return os.path.exists(os.path.join(ENROLLMENTS_DIR, f"{emp_id}.jpg"))
-
+ 
     async def close(self):
         await self.client.aclose()
 
@@ -291,60 +300,75 @@ class EmployeeSync:
 
         
     async def sync(self):
-        print(f"🔄 Starting sync... System Code: {self.system_code}") 
-        if not self.token:
-            await self.authenticate()
- 
-        system_info = await self.get_system_info() 
-        if not system_info:
-            print("❌ Unable to fetch system info. Aborting sync.")
-            return
-
-        EmployeeSync.sync_interval_ms = system_info.get("FingerMachineSyncInterval", 1000)
-        print(f"Sync Interval: {EmployeeSync.sync_interval_ms}ms")
-        self.save_secondary_settings(EmployeeSync.sync_interval_ms)
-
-        last_sync = self.get_last_sync_time()
-        print(f"🕒 Last sync: {last_sync}")
-
-        new_sync_time = await self.get_server_time()
-        if not new_sync_time:
-            print("❌ Server time unavailable")
-            return
-
-        url = f"{self.api_url}/api/Employees/GetNewChanges?lastSyncDate={quote(last_sync)}"
-        headers = {
-            "Authorization": f"Bearer {self.token}",
-            "SystemCode": self.system_code
-        }
-
         try:
-            response = await self.client.get(url, headers=headers)
-            if response.status_code == 401:
+            print(f"🔄 Starting sync... System Code: {self.system_code}") 
+            if not self.token:
                 await self.authenticate()
-                headers["Authorization"] = f"Bearer {self.token}"
+    
+            system_info = await self.get_system_info() 
+            if not system_info:
+                print("❌ Unable to fetch system info. Aborting sync.")
+                return
+
+            EmployeeSync.sync_interval_ms = system_info.get("FingerMachineSyncInterval", 1000)
+            print(f"Sync Interval: {EmployeeSync.sync_interval_ms}ms")
+            self.save_secondary_settings(EmployeeSync.sync_interval_ms)
+
+            last_sync = self.get_last_sync_time()
+            print(f"🕒 Last sync: {last_sync}")
+
+            new_sync_time = await self.get_server_time()
+            if not new_sync_time:
+                print("❌ Server time unavailable")
+                return
+
+            url = f"{self.api_url}/api/Employees/GetNewChanges?lastSyncDate={quote(last_sync)}"
+            headers = {
+                "Authorization": f"Bearer {self.token}",
+                "SystemCode": self.system_code
+            }
+
+            try:
                 response = await self.client.get(url, headers=headers)
-            response.raise_for_status()
-            data = response.json()
+                if response.status_code == 401:
+                    await self.authenticate()
+                    headers["Authorization"] = f"Bearer {self.token}"
+                    response = await self.client.get(url, headers=headers)
+                response.raise_for_status()
+                data = response.json()
+            except Exception as e:
+                print(f"❌ Sync failed: {e}")
+                return
+
+            print(f"📦 Syncing {len(data)} employees...")
+            
+            for idx, emp in enumerate(data, 1):
+                emp_id = emp["ID"]
+                if emp["Deleted"]:
+                    existingEmp = await self.db.get_employee(emp_id)
+                    if existingEmp is not None: 
+                        await self.db.delete_employee(emp_id)
+                        for id in HelperUtils.get_identifiers(emp["identifiers"]):
+                            fp.delete(id)
+                    self.delete_employee_image(emp_id)
+                    print("is initialized:", init)
+                else:
+                    employee = Employee(emp_id, emp["Name"], emp["Code"], emp["Identifiers"], emp["Description"])
+                    await self.db.upsert_employee(employee)
+                    await self.download_employee_image(emp_id)
+                    for identifier in HelperUtils.get_identifiers(employee.Identifiers): 
+                        print(f'Deleting template for identifier: {identifier}' )
+                        fp.delete(identifier)
+                        templateData = await ApiUtils.get_fingerprint_template(identifier) 
+                        if templateData is not None and len(templateData) > 0:
+                            print(f'Received template data {len(templateData)}' )
+                            fp.setTemplate(identifier, templateData)
+                await asyncio.sleep(0.01)
+
+            # 🔼 Upload and clear local attendances
+            await self.upload_attendances()
+            self.save_last_sync_time(new_sync_time)
+            print(f"✅ Sync completed. Last sync updated to: {new_sync_time}")
         except Exception as e:
-            print(f"❌ Sync failed: {e}")
-            return
-
-        print(f"📦 Syncing {len(data)} employees...")
-        for idx, emp in enumerate(data, 1):
-            emp_id = emp["ID"]
-            if emp["Deleted"]:
-                await self.db.delete_employee(emp_id)
-                self.delete_employee_image(emp_id)
-            else:
-                employee = Employee(emp_id, emp["Name"], emp["Code"], emp["Identifiers"], emp["Description"])
-                await self.db.upsert_employee(employee)
-                await self.download_employee_image(emp_id)
-
-            print(f"🔄 {idx}/{len(data)}")
-            await asyncio.sleep(0.01)
-
-        # 🔼 Upload and clear local attendances
-        await self.upload_attendances()
-        self.save_last_sync_time(new_sync_time)
-        print(f"✅ Sync completed. Last sync updated to: {new_sync_time}")
+            print(f"Sync Error: {e}")
+            await asyncio.sleep(5)

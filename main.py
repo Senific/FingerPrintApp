@@ -1,6 +1,8 @@
 import os
 import logging
 
+import fplib
+
 # Suppress overly verbose httpx/httpcore debug logs
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
@@ -23,6 +25,8 @@ from kivy.config import Config
 from kivy.core.window import Window
 from kivy.uix.screenmanager import ScreenManager, FadeTransition
 from kivy.app import App
+from kivy.base import EventLoop
+from kivy.clock import Clock
 
 from idleScreen import IdleScreen
 from menuScreen import MenuScreen
@@ -33,9 +37,24 @@ from settingsScreen import SettingsScreen
 from employeeListScreen import EmployeeListScreen
 from MarkAttendanceScreen  import MarkAttendanceScreen
 from AttendancesScreen import AttendancesScreen
-from employee_sync import EmployeeSync, EmployeeDatabase, SETTINGS_FILE
+from employee_sync import EmployeeSync, EmployeeDatabase, SETTINGS_FILE,fp
 
+# Global asyncio loop instance
+async_loop = asyncio.new_event_loop()
+asyncio.set_event_loop(async_loop)
 
+# Make Kivy call async loop periodically
+def run_async_loop(dt):
+    try:
+        async_loop.call_soon(async_loop.stop)
+        async_loop.run_forever()
+    except Exception as e:
+        print(f"[ERROR] Async loop crashed: {e}")
+
+# Schedule the asyncio loop to tick with Kivy's clock
+Clock.schedule_interval(run_async_loop, 0)
+
+ 
 # Detect Raspberry Pi
 is_raspberry = False
 if sys.platform == "linux":
@@ -56,6 +75,7 @@ Window.fullscreen = False
 Window.left = (Window.system_size[0] - 480) // 2
 Window.top = (Window.system_size[1] - 320) // 2
 
+ 
 class FingerprintApp(App):
     def build(self):
         self.employee_to_enroll = None
@@ -112,13 +132,53 @@ class BackgroundSyncThread(threading.Thread):
         finally:
             await sync.close()
 
-if __name__ == "__main__":
+
+
+class BackgroundFingerWaitThread(threading.Thread):
+    def __init__(self):
+        super().__init__(daemon=True)
+        self.loop = asyncio.new_event_loop()
+
+    def run(self):
+        asyncio.set_event_loop(self.loop)
+        self.loop.run_until_complete(self.watch_loop())
+
+    async def watch_loop(self):
+        logging.info("🔄 Started fingerprint watch loop") 
+        while True: 
+            try:
+                if fp.is_finger_pressed():
+                    logging.info("👉 Finger detected. Trying to identify...")
+                    identifier = fp.identify()
+                    if identifier is not None:
+                        logging.info(f"✅ User ID {identifier} recognized.")
+                        
+                        # TODO: trigger something in UI here
+                    else:
+                        logging.info("❌ Failed to identify.")
+                    
+                    # Wait for finger release to avoid repeat
+                    #await self.wait_for_finger_release()
+                await asyncio.sleep(0.2)  # polling interval
+            except Exception as e:
+                logging.error(f"Finger Wait error: {e}")
+                await asyncio.sleep(1) 
+         
+
+
+if __name__ == "__main__": 
     try:
         sync_thread = BackgroundSyncThread()
-        sync_thread.start()
+        sync_thread.start()  
     except Exception as e:
         logging.error(f"Background sync failed to start: {e}")
 
+    # try: 
+    #     fingerwait_thread = BackgroundFingerWaitThread() 
+    #     fingerwait_thread.start()
+    # except Exception as e:
+    #     logging.error(f"Background finger wait failed to start: {e}")
+ 
     try:
         FingerprintApp().run()
     except Exception as e:

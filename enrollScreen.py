@@ -1,3 +1,5 @@
+import asyncio
+import logging
 import os
 import time
 import math
@@ -10,27 +12,24 @@ from kivy.uix.button import Button
 from kivy.uix.popup import Popup
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.scrollview import ScrollView
-from kivy.app import App
-
-from employee_sync import RUNTIME_DIR, IMAGES_DIR, ENROLLMENTS_DIR
+from kivy.app import App 
+from kivy.clock import Clock
+from asyncio import get_event_loop
+from employee_sync import RUNTIME_DIR, IMAGES_DIR, fp
 from fplib import fplib
-
-# fingerprint module variables
-fp = fplib()
-init = fp.init()
-print("is initialized:", init)
-
-
-class EnrollScreen(Screen):
+from popups import PopupUtils
+from helper import HelperUtils
+from apiUtill import ApiUtils 
+class EnrollScreen(Screen): 
+    fp : fplib = None
     def on_pre_enter(self):
-        emp = App.get_running_app().employee_to_enroll
+        emp = App.get_running_app().employee_to_enroll  
         if emp:
             image_path = os.path.join(IMAGES_DIR, f"{emp['ID']}.jpg")
             if not os.path.exists(image_path):
                 image_path = os.path.join(IMAGES_DIR, "no_photo.jpg")
-
-            enrolled = self.check_enrollment_status(emp['ID'])
-            self.set_employee_details(image_path, emp['Name'], emp['Code'], enrolled)
+ 
+            self.set_employee_details(image_path, emp['Name'], emp['Code'], emp['Identifiers'])
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -90,15 +89,15 @@ class EnrollScreen(Screen):
         root_layout.add_widget(footer_layout)
 
         self.add_widget(root_layout)
+ 
 
     def start_enrollment(self, instance):
         emp = App.get_running_app().employee_to_enroll
-        # if not emp or not emp.get('Identifiers'):
-        #     print("No Identifiers found for this employee.")
-        #     return
+        if not emp or not emp.get('Identifiers'):
+            PopupUtils.show_message_popup( "No Identifiers Found!")
+            return
  
-        identifiers = "1,2,3".split(",")  # test with many buttons
-
+        identifiers = emp.get('Identifiers').split(",")  # test with many buttons
         count = len(identifiers)
 
         # Smart columns: square root logic
@@ -111,11 +110,21 @@ class EnrollScreen(Screen):
         grid.bind(minimum_height=grid.setter('height'))
 
         for identifier in identifiers:
-            btn = Button(text=f"{identifier}", size_hint_y=None, height=50)
-            if fp.CheckEnrolled(identifier):
-                btn.background_color = (0,1,0,1)
-            btn.bind(on_release=partial(self.identifier_selected, identifier))
+            id_int = int(identifier)
+            is_enrolled = fp.check_enrolled(id_int)
+
+            btn = Button(
+                text=f"{identifier}",
+                size_hint_y=None,
+                height=50,
+                background_color=(0, 1, 0, 1) if is_enrolled else (1, 1, 1, 1)  # green if enrolled
+            )
+
+            btn.bind(on_release=partial(
+                self.identifier_selected, identifier, is_enrolled))
+
             grid.add_widget(btn)
+
 
         # Wrap in ScrollView
         scrollview = ScrollView(size_hint=(1, 1))
@@ -133,32 +142,82 @@ class EnrollScreen(Screen):
         # Create Popup
         self.enroll_popup = Popup(title="Select Identifier to Enroll",
                                   content=popup_layout,
-                                  size_hint=(0.8, 0.8),
+                                  size_hint=(1, 1),
                                   auto_dismiss=False)
 
         # Open popup
         self.enroll_popup.open()
 
-    def identifier_selected(self, identifier, instance=None):
-        print(f"Selected Identifier: {identifier}")
+    def identifier_selected(self, identifier, is_enrolled, instance=None):
         self.selected_identifier = identifier
-        self.enroll_popup.dismiss()
 
-        # Now proceed with Enrollment logic using selected_identifier
-        print("Enrollment started...")
+        if is_enrolled:
+            # Show confirmation popup first without dismissing enroll_popup
+            def yesCallback(): 
+                PopupUtils.show_status_popup()
+                Clock.schedule_once(lambda dt: asyncio.ensure_future(self.deleteConfirmed(identifier)))
+                  
+            PopupUtils.show_confirm_popup(message= f"Delete Enrollment for identifier {identifier}?",  yesCallback = yesCallback )
+        else: 
+            PopupUtils.show_status_popup()
+            Clock.schedule_once(lambda dt: asyncio.ensure_future(self.perform_enroll(identifier)))
 
-        led = fp.set_led(True)
-        print("\n |__ LED status:", led)
-        time.sleep(2)
-        led = fp.set_led(False)
-        print("\n |__ LED status:", led)
+    async def deleteConfirmed(self,identifier): 
+        try:
+            PopupUtils.update_status_popup("Deleting Enrollment...",5)
+            await asyncio.sleep(1)
+            await ApiUtils.delete_fingerprint_template(identifier) 
+            result = fp.delete(idx=int(identifier))     
+            self.enroll_popup.dismiss()
+            self.on_pre_enter()
+            if result:
+                  PopupUtils.update_status_popup("Deleted Successfully",2)
+            else:
+                PopupUtils.update_status_popup("Delete Failed!",1)
+        except Exception as e:
+            PopupUtils.update_status_popup("Delete Failed! Check Your Internet",1) 
+        await asyncio.sleep(2)
+        PopupUtils.dismiss_status_popup()        
 
-        # Example - You can pass this identifier to enroll:
-        # id, data, downloadstat = fp.enroll(idx=int(identifier))
-        # print(f"\n |__ ID: {id} & is captured?", data is not None)
+    async def perform_enroll(self, id): 
+        PopupUtils.update_status_popup("Plesae place finger...", 3)
+        await asyncio.sleep(2)
+        PopupUtils.update_status_popup("Checking", 0)
+        if fp.is_finger_pressed():
+            idx, data, downloadstatus = await asyncio.to_thread(lambda: asyncio.run( fp.enroll(self.enrollStatus_Callback, idx = int(id))))
+            if idx >= 0: 
+                data,status =  fp.get_template(idx)
+                try:
+                    PopupUtils.update_status_popup("Uploading...", 4)
+                    asyncio.sleep(1)
+                    await ApiUtils.upload_fingerprint_template(idx, data)
+                    PopupUtils.update_status_popup("Successfully Enrolled!", 2)
+                except Exception as e:
+                    logging.error(e)
+                    PopupUtils.update_status_popup("Failed while uploading!", 1)
+                    fp.delete(idx) 
 
-        fp.close()
-
+                self.enroll_popup.dismiss()
+                self.on_pre_enter()
+            else:  
+                PopupUtils.update_status_popup("Enrolling Failed!", 1)
+            await asyncio.sleep(2)
+        else: 
+            PopupUtils.update_status_popup("Enrolling Failed!", 1)
+            await asyncio.sleep(2) 
+        PopupUtils.dismiss_status_popup()
+         
+     
+    def enrollStatus_Callback(self, msg):
+        def update_label(dt): 
+            PopupUtils.update_status_popup(msg,0)
+            #self.status_label_widget.text = msg 
+            #self.status_label_widget.canvas.ask_update()
+        logging.info(msg)
+        Clock.schedule_once(update_label)  # ✅ Just pass the function, not call it
+ 
+ 
+ 
     def mark(self, instance):
         app = App.get_running_app()
         app.employee_to_enroll = App.get_running_app().employee_to_enroll
@@ -171,11 +230,13 @@ class EnrollScreen(Screen):
             target = getattr(app, 'previous_screen', 'main')  # default to 'main'
             self.manager.current = target
 
-    def set_employee_details(self, image_path, name, code, enrolled):
+    def set_employee_details(self, image_path, name, code, identifiersStr):
         self.employee_image.source = image_path
         self.name_label.text = f"{name}"
         self.code_label.text = f"{code}"
-        self.status_label.text = "✅ Enrolled" if enrolled else "❌ Not Enrolled"
 
-    def check_enrollment_status(self, emp_id: int) -> bool:
-        return os.path.exists(os.path.join(ENROLLMENTS_DIR, f"{emp_id}.jpg"))
+        status,msg = HelperUtils.check_enrollment_status(fp,identifiersStr)
+        self.status_label.text = msg
+ 
+
+     

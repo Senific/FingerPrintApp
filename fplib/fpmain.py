@@ -1,3 +1,4 @@
+import asyncio
 import codecs
 import logging
 import serial
@@ -52,22 +53,60 @@ class Fingerprint():
 
     ACK = 0x30
     NACK = 0x31
-
-
-    # def __init__(self,  port, baud, timeout=1):
-    #     self.port = port
-    #     self.baud = baud
-    #     self.timeout = timeout
-    #     self.ser = None
-
+ 
     def __init__(self):
-        self.port = '/dev/serial0'
-        self.baud = 9600
-        self.timeout = 3
+        self.port = 'COM6'
+        self.baud = 115200
+        self.timeout = 1
         self.ser = None
 
     def __del__(self):
         self.close_serial()
+
+    @staticmethod
+    def print_hex(data, width=16):
+        s = ""
+        for i in range(0, len(data), width):
+            row = data[i:i+width]
+            s += ' '.join(f"{b:02X}" for b in row) + "\n"
+        return s
+
+
+    @staticmethod
+    def get_nack_description(code):
+        nack_errors = {
+            0x1001: "NACK_TIMEOUT: Capture timeout",
+            0x1002: "NACK_INVALID_BAUDRATE: Invalid baud rate",
+            0x1003: "NACK_INVALID_POS: Invalid position",
+            0x1004: "NACK_IS_NOT_USED: Position is not used",
+            0x1005: "NACK_IS_ALREADY_USED: Position already used",
+            0x1006: "NACK_COMM_ERR: Communication error",
+            0x1007: "NACK_VERIFY_FAILED: 1:1 Verification failed",
+            0x1008: "NACK_IDENTIFY_FAILED: 1:N Identification failed",
+            0x1009: "NACK_DB_IS_FULL: Database is full",
+            0x100A: "NACK_DB_IS_EMPTY: Database is empty",
+            0x100B: "NACK_TURN_ERR: Bad image capture (too fast)",
+            0x100C: "NACK_BAD_FINGER: Poor image quality",
+            0x100D: "NACK_ENROLL_FAILED: Enrollment failed",
+            0x100E: "NACK_IS_NOT_SUPPORTED: Command not supported",
+            0x100F: "NACK_DEV_ERR: Sensor/hardware error",
+            0x1010: "NACK_CAPTURE_CANCELED: Capture canceled",
+            0x1011: "NACK_INVALID_PARAM: Invalid parameter",
+            0x1012: "NACK_FINGER_IS_NOT_PRESSED: No finger on sensor",
+            0x1013: "NACK_TEMPLATE_UPLOAD_FAIL: Upload failed",
+            0x1014: "NACK_TEMPLATE_DOWNLOAD_FAIL: Download failed",
+            0x1015: "NACK_FAIL: Generic unspecified error",
+            0x1016: "NACK_INVALID_TEMPLATE: Invalid template",
+            0x1017: "NACK_BAD_TEMPLATE: Corrupted template",
+            0x1018: "NACK_FLASH_ERR: Flash write error",
+            0x1019: "NACK_INVALID_TEMPLATE_SIZE: Invalid template size",
+            0x101A: "NACK_MISMATCH_TEMPLATE_TYPE: Template type mismatch",
+            0x101B: "NACK_BAD_SENSOR: Sensor malfunction",
+            0x101C: "NACK_WAIT_FINGER_TIMEOUT: Finger detection timeout",
+        }
+        return nack_errors.get(code, f"Unknown NACK code: 0x{code:04X}")
+
+
 
     def init(self):
         try:
@@ -125,8 +164,7 @@ class Fingerprint():
 
     def _send_packet(self, cmd, param=0):
         cmd = Fingerprint.COMMENDS[cmd]
-        param_value = param if param is not None else 0
-        param = [int(hex(param_value >> i & 0xFF), 16) for i in (0, 8, 16, 24)]  
+        param = [int(hex(param >> i & 0xFF), 16) for i in (0, 8, 16, 24)]
 
         packet = bytearray(12)
         packet[0] = 0x55
@@ -190,8 +228,9 @@ class Fingerprint():
 
     def _read_packet(self, wait=True):
         """
+
         :param wait:
-        :return: ack (bool), nack_code_or_param (int), res (int), data (bytes)
+        :return: ack, param, res, data
         """
         # Read response packet
         packet = bytearray(12)
@@ -209,43 +248,45 @@ class Fingerprint():
         p = self.ser.read(10)
         packet[2:12] = p[:]
 
-        # Parse ACK or NACK
-        ack_code = packet[8]
-        ack = True if ack_code == Fingerprint.ACK else False
+        # Parse ACK
+        ack = True if packet[8] == Fingerprint.ACK else False
 
-        # Parse parameter (NACK code or parameter value)
+        # Parse parameter
         param = bytearray(4)
         param[:] = packet[4:8]
-        param_val = int(codecs.encode(param[::-1], 'hex_codec'), 16)
+        if param is not None:
+            param = int(codecs.encode(param[::-1], 'hex_codec'), 16)
 
-        # Parse response code (0x30 or 0x31)
+        # Parse response
         res = bytearray(2)
         res[:] = packet[8:10]
-        res_val = int(codecs.encode(res[::-1], 'hex_codec'), 16)
+        if res is not None:
+            res = int(codecs.encode(res[::-1], 'hex_codec'), 16)
 
-        # Read data packet (if present)
+        # Read data packet
         data = None
         if self.ser and self.ser.readable() and self.ser.inWaiting() > 0:
             firstbyte, secondbyte = self._read_header()
             if firstbyte and secondbyte:
+                # Data exists.
                 if firstbyte == Fingerprint.PACKET_DATA_0 and secondbyte == Fingerprint.PACKET_DATA_1:
                     print(">> Data exists...")
+                    # print("FB-SB: ", firstbyte, secondbyte)
                     data = bytearray()
                     data.append(firstbyte)
                     data.append(secondbyte)
-
-        read_buffer = b''
+        read_buffer = b''                    
         if data:
             while True:
                 chunk_size = 14400
                 p = self.ser.read(size=chunk_size)
                 read_buffer += p
+                # print(p, type(p))
                 if len(p) == 0:
                     print(">> Transmission Completed . . .")
                     break
 
-        return ack, param_val, res_val, read_buffer
-
+        return ack, param, res, read_buffer
 
     def open(self):
         if self._send_packet("Open"):
@@ -316,7 +357,7 @@ class Fingerprint():
     
     def MakeTemplate(self):
         if not self.capture_finger(best=True):
-            return None, False
+            return None
         if self._send_packet("MakeTemplate"):
             ack, param, res, data = self._read_packet()
             if not ack:
@@ -346,97 +387,70 @@ class Fingerprint():
     def enroll3(self):
         if self._send_packet("Enroll3"):
             ack, param, res, data = self._read_packet()
-            logger.debug(f"[Enroll3] ack={ack}, param={hex(param)}, res={hex(res)}")
-            # Must return ack=True and param==0 to be valid
-            if ack and param == 0:
-                return data, True
-            else:
-                logger.warning("⚠️ Enroll3 failed or partial.")
-                return data, False
-        return None, False
+            if not ack:
+                return None, False
+            return data, True  if param == 0 else False
+        return None, None
 
+    async def enroll(self, status_callback, idx=None, try_cnt=10, sleep=1 ):
+        if idx is None:
+            status_callback("Invalid ID provided")
+            return -1,None,None
+        
+        # Check whether the finger already exists or not
+        for i in range(try_cnt):
+            existingIdx = self.identify() 
+            if existingIdx is not None:
+                break
+            await asyncio.sleep(sleep)
+            status_callback("Checking existence...")
 
-    def enroll(self, idx=None, try_cnt=10, sleep=1):
-        # Decide ID to use
-        if idx is None or idx < 0:
-            self.open()
-            idx = self.get_enrolled_cnt()
-
-        logger.info(f"🔐 Starting enrollment for ID: {idx}")
-
-        # Start enrolling
+        if  existingIdx is not None and existingIdx >= 0 and existingIdx != idx: 
+            status_callback(f"Deleting Previous Registration for ID: {existingIdx}" )
+            await asyncio.sleep(sleep)
+            deleteResult = self.delete(existingIdx)
+            if deleteResult == False:  
+                status_callback(f"Delete Failed for ID: {existingIdx}" )
+                await asyncio.sleep(sleep)
+                return -1,None,None
+        status_callback("Start enrolling...")
         cnt = 0
-        while True:
+        while True: 
             if self.start_enroll(idx):
-                logger.info("✅ EnrollStart successful")
+                # Enrolling started
                 break
             else:
                 cnt += 1
                 if cnt >= try_cnt:
-                    logger.error(f"❌ Failed to start enrollment for ID {idx}.")
-                    return -1, None, None
-                time.sleep(sleep)
+                    return -1, None , None 
+                await asyncio.sleep(sleep)
 
-        # Enroll steps 1 and 2
-        for step, enr_func in enumerate([self.enroll1, self.enroll2], start=1):
-            logger.info(f"➡️ Step {step}: Place finger for enroll{step}...")
+        #Start enroll 1, 2, and 3
+        for enr_num, enr in enumerate(["enroll1", "enroll2"]):
+            status_callback("Start %s..." % enr)
             cnt = 0
             while not self.capture_finger(best=True):
                 cnt += 1
                 if cnt >= try_cnt:
-                    logger.error(f"❌ Failed to capture finger for enroll{step}.")
-                    return -1, None, None
-                logger.info("Waiting for finger...")
-                time.sleep(sleep)
-
-            logger.info(f"✅ Finger captured for enroll{step}")
+                    return -1, None , None
+                await asyncio.sleep(sleep)
+                status_callback("Capturing a fingerprint...")
             cnt = 0
-            while not enr_func():
+            while not getattr(self, enr)():
                 cnt += 1
                 if cnt >= try_cnt:
-                    logger.error(f"❌ enroll{step} failed.")
-                    return -1, None, None
-                logger.info(f"Retrying enroll{step}...")
-                time.sleep(sleep)
-            logger.info(f"✅ enroll{step} succeeded")
-            logger.info("🖐 Please remove finger...")
-
-            # Wait for finger to be removed
-            while self.is_finger_pressed():
-                time.sleep(0.5)
-
-        # Enroll step 3 (final capture and save)
-        while self.is_finger_pressed():
-            time.sleep(0.5)
-        logger.info("➡️ Final step: Place finger again for enroll3...")
-
+                    return -1, None ,None
+                await asyncio.sleep(sleep)
+                status_callback("Enrolling the captured fingerprint...")
+            
         if self.capture_finger(best=True):
+            status_callback("Start enroll3...")
             data, downloadstat = self.enroll3()
-            logger.debug(f"[DEBUG] Enroll3 → OK: {downloadstat}, Data Length: {len(data) if data else 0}")
+            if idx == -1:
+                return idx, data, downloadstat
+        # Enroll process finished
+        return idx, None, None
 
-            if downloadstat and data and len(data) >= 498:
-                logger.info(f"🎉 Enroll3 succeeded — ID {idx} saved.")
-                logger.debug(f"[DEBUG] Enrolled count after enroll: {self.get_enrolled_cnt()}")
-
-                # Post-check
-                enrolled = self.CheckEnrolled(idx)
-                logger.debug(f"[DEBUG] Enrolled check post-enroll: {enrolled}")
-                if not enrolled:
-                    logger.warning(f"[WARN] Device didn't confirm enrollment of ID {idx}.")
-                    return idx, data, False
-
-                templ, ok = self.GetTemplate(idx)
-                logger.debug(f"[DEBUG] Template fetch right after enroll: {'✅ Success' if ok and templ and len(templ) > 0 else '❌ Failed'}")
-                return idx, data, ok
-
-            else:
-                logger.warning(f"[WARN] Enroll3 completed but template data invalid for ID {idx}.")
-                return idx, data, False
-
-        logger.error(f"❌ Final capture before enroll3 failed for ID {idx}.")
-        return idx, None, False
-
-    
     def verifyTemplate(self, idx, data):
         data_bytes = bytearray()
         data_bytes.append(90)
@@ -466,30 +480,27 @@ class Fingerprint():
                     return True
                 return False
             return False
-        return False
+        return False 
     
-    def GetTemplate(self, idx):
-        if self._send_packet("GetTemplate", param=idx):
-            ack, param, res, data = self._read_packet()
-            if not ack:
-                return None, False
-            return data, True if param == 0 else False
-        else:
-            return None, False
 
-
-    def delete(self, idx=None):
-        res = None
-        if idx == None:
-            # Delete all fingerprints
-            res = self._send_packet("DeleteAll")
-        else:
-            # Delete all fingerprints
-            res = self._send_packet("DeleteID", idx)
+    def deleteAll(self):
+        res = self._send_packet("DeleteAll")
         if res:
             ack, _, _, _ = self._read_packet()
             return ack
-        return None
+        return False
+
+    def delete(self, idx):
+        if not isinstance(idx, int) or idx < 0:
+            print("Invalid ID")
+            return False 
+        
+        # Delete all fingerprints
+        res = self._send_packet("DeleteID", idx)
+        if res:
+            ack, _, _, _ = self._read_packet()
+            return ack
+        return False
 
     def identify(self):
         if not self.capture_finger(best=True):
@@ -515,57 +526,46 @@ class Fingerprint():
                 return param
             return -1
         return None
- 
-    def CheckEnrolled(self, idx):
-        if self._send_packet("CheckEnrolled", param=idx):
-            ack, param, res, data = self._read_packet()
-            
-            if ack:
-                # ACK → param = 1 means enrolled
-                return param != 0
-            else:
-                # NACK → param = NACK error code
-                # Special case: NACK_IS_NOT_USED → ID not enrolled
-                if param == 0x1004:
-                    print(f"❌ CheckEnrolled: ID {idx} is NOT enrolled (NACK_IS_NOT_USED).")
-                    return False
-                else:
-                    # Other NACK → unexpected error → show message
-                    if hasattr(self, "DisplayErr"):
-                        self.DisplayErr(param)
-                    else:
-                        print(f"❌ CheckEnrolled: NACK error 0x{param:X} for ID {idx}.")
-                    return False
-        else:
-            print("❌ Failed to send CheckEnrolled command.")
+
+
+    def check_enrolled(self, idx):
+        #Check if a fingerprint is enrolled at the given ID. 
+        if not isinstance(idx, int) or idx < 0:
+            print("Invalid ID for check_enrolled.")
             return False
 
-
-    def DisplayErr(self, nack_code):
-        NACK_ERRORS = {
-            0x1001: "Timeout",
-            0x1002: "Invalid baudrate",
-            0x1003: "Invalid ID",
-            0x1004: "ID is not used",
-            0x1005: "ID is already used",
-            0x1006: "Communication error",
-            0x1007: "Verify failed",
-            0x1008: "Identify failed",
-            0x1009: "Database is full",
-            0x100A: "Database is empty",
-            0x100B: "Enroll order error",
-            0x100C: "Bad finger",
-            0x100D: "Enroll failed",
-            0x100E: "Command not supported",
-            0x100F: "Device error",
-            0x1010: "Capture canceled",
-            0x1011: "Invalid parameter",
-            0x1012: "Finger not pressed",
-            0x1013: "RAM error",
-            0x1014: "Template capacity full",
-            0x1015: "Command no support",
-        }
-        if nack_code in NACK_ERRORS:
-            print(f"❌ NACK: {NACK_ERRORS[nack_code]} (0x{nack_code:X})")
+        if self._send_packet("CheckEnrolled", param=idx):
+            ack, param, res, _ = self._read_packet()
+            if ack: 
+                return True 
+            else:
+                print(f"Res:{res} Param:{param} {self.get_nack_description(param)}")
+                return False
         else:
-            print(f"❌ NACK: Unknown error code (0x{nack_code:X})")
+            print("Failed to send CheckEnrolled command.")
+            return False
+
+    def get_template(self, idx):
+        #Downloads the fingerprint template stored at the specified ID.
+        #Returns:
+        #    template_data (bytes): The raw template data.
+        #    success (bool): Whether the operation was successful. 
+ 
+        if not isinstance(idx, int) or idx < 0:
+            print("Invalid ID.")
+            return None, False
+
+        if self._send_packet("GetTemplate", idx):
+            ack, param, res, data = self._read_packet()
+            if not ack:
+                print(f"Res:{res} Param:{param} {self.get_nack_description(param)}")
+                return None, False
+
+            if data and len(data) > 0: 
+                return data, True
+            else:
+                print("Template data is empty or missing.")
+                return None, False 
+        else:
+            print("Failed to send GetTemplate command.")
+            return None, False

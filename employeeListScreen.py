@@ -74,9 +74,9 @@ class EmployeeListScreen(Screen):
         db_path = os.path.join(RUNTIME_DIR, "employees.db")
         employees = []
         async with aiosqlite.connect(db_path) as db:
-            async with db.execute("SELECT ID, Name, Code FROM Employees ORDER BY Name ASC") as cursor:
+            async with db.execute("SELECT ID, Name, Code,Identifiers FROM Employees ORDER BY Code ASC") as cursor:
                 async for row in cursor:
-                    employees.append({"ID": row[0], "Name": row[1], "Code": row[2]})
+                    employees.append({"ID": row[0], "Name": row[1], "Code": row[2], "Identifiers": row[3] })
         return employees
 
     def update_ui(self, employee_list):
@@ -99,7 +99,7 @@ class EmployeeListScreen(Screen):
 
     def perform_search(self):
         text = self.search_input.text.strip().lower()
-        if not text:
+        if not text or text.strip() == "": 
             # Don't show full list on empty search — show nothing
             Clock.schedule_once(lambda dt: self.update_ui([]))
             return
@@ -153,14 +153,13 @@ class EmployeeListScreen(Screen):
         if header:
             row.add_widget(Label(text="[b]Action[/b]", markup=True, color=color, font_size=14))
         else:
-            enrolled = EmployeeSync.has_enrollment_image(emp["ID"])
+            if emp is None: 
+                return row
             btn = Button(
                 text="Enroll",
                 size_hint_x=None,
                 width=100,
-                font_size=14,
-                background_color=(0, 0.6, 0, 1) if enrolled else (1, 1, 1, 1),
-                color=(1, 1, 1, 1) if enrolled else (0, 0, 0, 1)
+                font_size=14
             )
             btn.bind(on_release=lambda instance: self.goto_enroll(emp))
             row.add_widget(btn)

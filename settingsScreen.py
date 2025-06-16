@@ -6,7 +6,7 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.gridlayout import GridLayout
 from kivy.clock import Clock, mainthread
 from kivy.uix.image import Image
-from employee_sync import get_api_config,RUNTIME_DIR, SETTINGS_FILE, FERNET_KEY_FILE, DB_FILE, LAST_SYNC_FILE
+from employee_sync import get_api_config,RUNTIME_DIR, SETTINGS_FILE, FERNET_KEY_FILE, DB_FILE, LAST_SYNC_FILE, fp
 import os
 import json
 from cryptography.fernet import Fernet
@@ -156,6 +156,8 @@ class SettingsScreen(Screen):
             if os.path.exists(RUNTIME_DIR):
                 shutil.rmtree(RUNTIME_DIR)
  
+            fp.deleteAll()
+
             # if reboot:
             #     threading.Thread(target=lambda: os.system("sudo reboot")).start()
         except Exception as e:
