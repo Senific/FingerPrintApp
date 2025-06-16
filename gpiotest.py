@@ -10,7 +10,7 @@ def on_touch_detected(channel):
 GPIO.setmode(GPIO.BCM)
 
 # 2. Set up pin as input with internal PULL DOWN (optional if using external resistor)
-GPIO.setup(TOUCH_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+GPIO.setup(TOUCH_PIN, GPIO.IN)
 
 # 3. Try to add event detection
 try:
@@ -21,7 +21,7 @@ except RuntimeError as e:
     GPIO.cleanup()
     exit(1)
 
-# 4. Keep running
+# 4. Keep runninga
 print("📡 Waiting for touch...")
 try:
     while True:
