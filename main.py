@@ -143,7 +143,7 @@ class BackgroundFingerWaitThread(threading.Thread):
 
     async def watch_loop(self):
         if is_raspberry:
-            logging.info("🔄 Started fingerprint watch loop") 
+            print.info("🔄 Started fingerprint watch loop") 
             import RPi.GPIO as GPIO
             import time
 
@@ -174,11 +174,11 @@ class BackgroundFingerWaitThread(threading.Thread):
 
 
 if __name__ == "__main__": 
-    try:
-        sync_thread = BackgroundSyncThread()
-        sync_thread.start()  
-    except Exception as e:
-        logging.error(f"Background sync failed to start: {e}")
+    # try:
+    #     sync_thread = BackgroundSyncThread()
+    #     sync_thread.start()  
+    # except Exception as e:
+    #     logging.error(f"Background sync failed to start: {e}")
 
 
     try: 
