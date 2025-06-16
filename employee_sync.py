@@ -12,8 +12,8 @@ from helper import HelperUtils
 
 # fingerprint module variables
 fp = fplib()
-#init = fp.init()
-#print("is initialized:", init)
+init = fp.init()
+print("is initialized:", init)
 
 # 🔧 Constants
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

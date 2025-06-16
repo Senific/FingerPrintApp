@@ -55,7 +55,8 @@ class Fingerprint():
     NACK = 0x31
  
     def __init__(self):
-        self.port = 'COM6'
+        #self.port = 'COM6'
+        self.port = '/dev/serial0'
         self.baud = 115200
         self.timeout = 1
         self.ser = None
