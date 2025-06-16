@@ -152,6 +152,9 @@ class BackgroundFingerWaitThread(threading.Thread):
             while True:  
                 try:
                     if GPIO.input(TOUCH_PIN):
+                        fp.set_led(True)
+                        time.sleep(2)
+                        fp.set_led(False)
                         print("👆 Finger detected!")
                         time.sleep(0.5)  # debounce delay
                 except Exception as e:
