@@ -173,11 +173,12 @@ if __name__ == "__main__":
     except Exception as e:
         logging.error(f"Background sync failed to start: {e}")
 
+
     # try: 
     #     fingerwait_thread = BackgroundFingerWaitThread() 
     #     fingerwait_thread.start()
     # except Exception as e:
-    #     logging.error(f"Background finger wait failed to start: {e}")
+    #     logging.error(f"Background finger wait failed to start: {e}") 
  
     try:
         FingerprintApp().run()
