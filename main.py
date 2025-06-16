@@ -143,7 +143,7 @@ class BackgroundFingerWaitThread(threading.Thread):
 
     async def watch_loop(self):
         if is_raspberry:
-            print.info("🔄 Started fingerprint watch loop") 
+            print("🔄 Started fingerprint watch loop") 
             import RPi.GPIO as GPIO
             import time
 
