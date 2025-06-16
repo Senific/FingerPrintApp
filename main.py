@@ -132,7 +132,7 @@ class BackgroundSyncThread(threading.Thread):
 
 
 
-class BackgroundFingerWaitThread(threading.Thread):
+class BackgroundFingerWaitThread(threading.Thread): 
     def __init__(self):
         super().__init__(daemon=True)
         self.loop = asyncio.new_event_loop()
@@ -142,26 +142,22 @@ class BackgroundFingerWaitThread(threading.Thread):
         self.loop.run_until_complete(self.watch_loop())
 
     async def watch_loop(self):
-        logging.info("🔄 Started fingerprint watch loop") 
-        while True: 
-            try:
-                if fp.is_finger_pressed():
-                    logging.info("👉 Finger detected. Trying to identify...")
-                    identifier = fp.identify()
-                    if identifier is not None:
-                        logging.info(f"✅ User ID {identifier} recognized.")
-                        
-                        # TODO: trigger something in UI here
-                    else:
-                        logging.info("❌ Failed to identify.")
-                    
-                    # Wait for finger release to avoid repeat
-                    #await self.wait_for_finger_release()
-                await asyncio.sleep(0.2)  # polling interval
-            except Exception as e:
-                logging.error(f"Finger Wait error: {e}")
-                await asyncio.sleep(1) 
-         
+        if is_raspberry:
+            import RPi.GPIO as GPIO
+            import time
+            GPIO.setmode(GPIO.BCM)
+            GPIO.setup(TOUCH_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+            logging.info("🔄 Started fingerprint watch loop") 
+            TOUCH_PIN = 5  # Using GPIO5 (Pin 29)
+            while True:  
+                try:
+                    if GPIO.input(TOUCH_PIN):
+                        print("👆 Finger detected!")
+                        time.sleep(0.5)  # debounce delay
+                except Exception as e:
+                    GPIO.cleanup()  
+        else:
+            print("👆 Only Runs In Raspberry Pi!")
 
 
 if __name__ == "__main__": 
@@ -172,11 +168,11 @@ if __name__ == "__main__":
         logging.error(f"Background sync failed to start: {e}")
 
 
-    # try: 
-    #     fingerwait_thread = BackgroundFingerWaitThread() 
-    #     fingerwait_thread.start()
-    # except Exception as e:
-    #     logging.error(f"Background finger wait failed to start: {e}") 
+    try: 
+        fingerwait_thread = BackgroundFingerWaitThread() 
+        fingerwait_thread.start()
+    except Exception as e:
+        logging.error(f"Background finger wait failed to start: {e}") 
  
     try:
         FingerprintApp().run()
