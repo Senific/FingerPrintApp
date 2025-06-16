@@ -130,7 +130,19 @@ class BackgroundSyncThread(threading.Thread):
         finally:
             await sync.close()
 
+import time
+import RPi.GPIO as GPIO
+# in main.py or __init__ before starting thread or async loop
+TOUCH_PIN = 5  # Use any free GPIO
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(TOUCH_PIN, GPIO.IN)
+def on_finger_touch(channel):
+    fp.set_led(True)
+    time.sleep(1)
+    fp.set_led(False)
+    logging.info("👆 Finger touch detected!")
 
+GPIO.add_event_detect(TOUCH_PIN, GPIO.RISING, callback=on_finger_touch, bouncetime=200)
 
 class BackgroundFingerWaitThread(threading.Thread): 
     def __init__(self):
@@ -143,36 +155,14 @@ class BackgroundFingerWaitThread(threading.Thread):
 
     async def watch_loop(self):
         if is_raspberry:
-            logging.info("🔄 Started fingerprint watch loop") 
-            import RPi.GPIO as GPIO
-            import time
-
-            TOUCH_PIN = 5  # Use any free GPIO
-
-            GPIO.setmode(GPIO.BCM)
-            GPIO.setup(TOUCH_PIN, GPIO.IN)
-
-            def on_finger_touch(channel):
-                fp.set_led(True)
-                time.sleep(1)
-                fp.set_led(False)
-                logging.info("👆 Finger touch detected!")
-
-            
-            # Detect rising edge only (2.37V → 3.23V)
-            GPIO.add_event_detect(TOUCH_PIN, GPIO.RISING, callback=on_finger_touch, bouncetime=200)
-
-            logging.info("Waiting for finger touch...")
-
-            try:
-                while True:
-                    time.sleep(1)
-            except KeyboardInterrupt:
-                GPIO.cleanup() 
+            logging.info("🔄 Started fingerprint watch loop")    
+            while True:
+                if GPIO.input(TOUCH_PIN):
+                    on_finger_touch(TOUCH_PIN)
+                await asyncio.sleep(0.05)
         else:
             logging.info("👆 Only Runs In Raspberry Pi!")
-
-
+   
 if __name__ == "__main__": 
     # try:
     #     sync_thread = BackgroundSyncThread()
