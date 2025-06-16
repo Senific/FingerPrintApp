@@ -147,7 +147,7 @@ class BackgroundFingerWaitThread(threading.Thread):
             import time
             GPIO.setmode(GPIO.BCM)
             TOUCH_PIN = 5  # Using GPIO5 (Pin 29)
-            GPIO.setup(TOUCH_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+            GPIO.setup(TOUCH_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
             logging.info("🔄 Started fingerprint watch loop") 
             while True:  
                 try:
