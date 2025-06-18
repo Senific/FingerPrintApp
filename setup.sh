@@ -31,10 +31,7 @@ deactivate
 
 # Add user to gpio group:
 sudo usermod -aG gpio admin
-
-#This is to Enable FingerPrint touch sensor 
-sudo apt update
-sudo apt install python3-gpiozero
+ 
 
 
 echo "🎉 Environment setup complete!"
