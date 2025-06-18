@@ -9,19 +9,19 @@ def on_touch_detected(channel):
 # 1. Set GPIO mode
 GPIO.setmode(GPIO.BCM)
 
-# 2. Set up pin as input with internal PULL DOWN (optional if using external resistor)
+# 2. Set up pin as input (no internal pull needed, you already use external pull-up)
 GPIO.setup(TOUCH_PIN, GPIO.IN)
 
-# 3. Try to add event detection
+# 3. Try to add event detection for FALLING edge (high to low = touch)
 try:
-    GPIO.add_event_detect(TOUCH_PIN, GPIO.RISING, callback=on_touch_detected, bouncetime=200)
+    GPIO.add_event_detect(TOUCH_PIN, GPIO.FALLING, callback=on_touch_detected, bouncetime=200)
     print("✅ Edge detection added successfully.")
 except RuntimeError as e:
     print("❌ RuntimeError:", e)
     GPIO.cleanup()
     exit(1)
 
-# 4. Keep runninga
+# 4. Keep running
 print("📡 Waiting for touch...")
 try:
     while True:
