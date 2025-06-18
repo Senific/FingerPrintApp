@@ -1,12 +1,17 @@
 import RPi.GPIO as GPIO
 import time
+from fplib import fplib
 
 TOUCH_PIN = 5  # GPIO5 (physical pin 29)
 
 def on_touch_event(channel):
     if GPIO.input(channel) == GPIO.LOW:
+        fplib.open()
+        fplib.set_led(True)
         print("👆 Finger touched")
     else:
+        fplib.set_led(False)
+        fplib.close()
         print("✋ Finger released")
 
 # 1. Set GPIO mode
