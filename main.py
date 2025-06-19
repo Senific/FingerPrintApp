@@ -92,14 +92,10 @@ def on_touch(gpio, level, tick):
 
 async def Identify(): 
     if fp.is_finger_pressed():
-        asyncio.sleep(.2)
-        fp.set_led(False)
-        asyncio.sleep(.2)
+        identifier = fp.identify()
+        App.get_running_app().root.current = "mark"
         fp.set_led(True)
-        asyncio.sleep(.2)
-        fp.set_led(False)
-        asyncio.sleep(.2)
-        fp.set_led(True)
+        fp.close()
 
 # Connect to pigpio daemon
 pi = pigpio.pi()
