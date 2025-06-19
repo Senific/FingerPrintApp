@@ -94,7 +94,8 @@ def on_touch(gpio, level, tick):
             if on_touch_callback is not None:
                 print("Touch Callback is Active")
                 logging.info("Touch Callback is Active")
-                on_touch_callback(level == 0)
+                touchResult = level = 0
+                on_touch_callback(touchResult)
             else:
                 print("Touch Callback is None")
                 logging.info("Touch Callback is None")
