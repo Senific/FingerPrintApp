@@ -80,11 +80,7 @@ Window.top = (Window.system_size[1] - 320) // 2
 import pigpio
 TOUCH_PIN = 5  # GPIO5 (Physical pin 29)
 def on_touch(gpio, level, tick):
-    if level == 0:
-        fp.open()
-        fp.set_led(True) 
-        # if fp.is_finger_pressed(): 
-        #     fp.set_led()    
+    if level == 0: 
         Clock.schedule_once(lambda dt: asyncio.ensure_future(Identify()))
         print("👆 Finger touched")
     elif level == 1:
@@ -94,6 +90,8 @@ def on_touch(gpio, level, tick):
 
 async def Identify():  
     try:    
+        fp.open()
+        fp.set_led(True) 
         if fp.is_finger_pressed():
             identifier = fp.identify()
             if identifier is not None and identifier >= 0:  
@@ -105,26 +103,20 @@ async def Identify():
                         app.employee_to_enroll = employee
                         app.root.current = "mark" 
                     else: 
-                        fp.set_led(False)
-                        await asyncio.sleep(.2)
-                        fp.set_led(True)
-                        await asyncio.sleep(.2)
-                        fp.set_led(False)
-                        await asyncio.sleep(.2)
-                        fp.set_led(True)
-                        await asyncio.sleep(.2)
-                        fp.set_led(False)
-                        await asyncio.sleep(.2)
+                        print("No employee found for identifier!")
                 except Exception as e:
                     print(f"Identify Exception: {e}")
-                    logging.error(f"Identify Exception: {e}") 
-        fp.set_led(False)
-        fp.close()
+                    logging.error(f"Identify Exception: {e}")  
     except Exception as e: 
             print(f"Identify.2 Exception : {e}")
-            logging.error(f"Identify Exception: {e}") 
-
-
+            logging.error(f"Identify.2 Exception: {e}") 
+    finally:
+        try:
+            fp.set_led(False)
+            fp.close()
+        except Exception as e:
+            print(f"Identify.3 Exception : {e}")
+            logging.error(f"Identify.3 Exception: {e}") 
 
 # Connect to pigpio daemon
 pi = pigpio.pi()
