@@ -77,15 +77,22 @@ Window.left = (Window.system_size[0] - 480) // 2
 Window.top = (Window.system_size[1] - 320) // 2
 
 
-import pigpio
+import pigpio 
 TOUCH_PIN = 5  # GPIO5 (Physical pin 29)
-def on_touch(gpio, level, tick):
-    if level == 0: 
-        Clock.schedule_once(lambda dt: asyncio.ensure_future(identify()))
-        print("👆 Finger touched")
-    elif level == 1: 
-        print("✋ Finger released")
 
+on_touch_callback  = None
+
+def on_touch(gpio, level, tick):
+    if App.get_running_app().root.current == "main":
+        if level == 0: 
+            Clock.schedule_once(lambda dt: asyncio.ensure_future(identify()))
+            print("👆 Finger touched")
+        elif level == 1: 
+            print("✋ Finger released")
+    else:
+        if on_touch_callback is not None:
+            on_touch_callback(level == 0)
+ 
 async def identify():  
     try:    
         fp.open()
