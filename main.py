@@ -99,13 +99,11 @@ async def Identify():
             try:
                 print(f"Identified: {identifier}")
                 app =  App.get_running_app()  
-                employee = await db.get_employeeByIdentifier(identifier) 
+                employee = await db.get_employeeByIdentifier(identifier)
                 if employee is not None: 
-                    print(f"Employee Found: {employee["Code"]}")
                     app.employee_to_enroll = employee
                     app.root.current = "mark" 
                 else: 
-                    print(f"Employee Not Found")
                     fp.set_led(False)
                     await asyncio.sleep(.2)
                     fp.set_led(True)
@@ -118,7 +116,8 @@ async def Identify():
                     await asyncio.sleep(.2)
             except Exception as e:
                 print(f"Identify Exception: {e}")
-                logging.error(f"Identify Exception: {e}")  
+                logging.error(f"Identify Exception: {e}") 
+        identifier
     fp.set_led(False)
     fp.close()
 
