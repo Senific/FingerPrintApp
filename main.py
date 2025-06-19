@@ -38,6 +38,8 @@ from AttendancesScreen import AttendancesScreen
 from employee_sync import EmployeeSync, EmployeeDatabase, SETTINGS_FILE,fp
 
 
+db = EmployeeDatabase()
+
 # Global asyncio loop instance
 async_loop = asyncio.new_event_loop()
 asyncio.set_event_loop(async_loop)
@@ -96,7 +98,7 @@ async def Identify():
         if identifier is not None:  
             try:
                 app =  App.get_running_app() 
-                employee = EmployeeDatabase.get_employeeByIdentifier(identifier=identifier)
+                employee = db.get_employeeByIdentifier(identifier)
                 if employee is not None: 
                     app.employee_to_enroll = employee
                     app.root.current = "mark" 
@@ -167,7 +169,6 @@ class BackgroundSyncThread(threading.Thread):
     async def sync_loop(self):
         from employee_sync import get_api_config  # Safe import inside thread
 
-        db = EmployeeDatabase()
         await db.initialize()
 
         try:
