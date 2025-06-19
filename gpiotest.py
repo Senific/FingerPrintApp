@@ -14,12 +14,12 @@ TOUCH_PIN = 5  # GPIO5 (Physical pin 29)
 
 def on_touch(gpio, level, tick):
     if level == 0:
-        fplib.open()
-        fplib.set_led(True)
+        fp.open()
+        fp.set_led(True)
         print("👆 Finger touched")
     elif level == 1:
-        fplib.set_led(False)
-        fplib.close()
+        fp.set_led(False)
+        fp.close()
         print("✋ Finger released")
 
 # Connect to pigpio daemon
