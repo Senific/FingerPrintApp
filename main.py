@@ -117,7 +117,6 @@ async def Identify():
             except Exception as e:
                 print(f"Identify Exception: {e}")
                 logging.error(f"Identify Exception: {e}") 
-        identifier
     fp.set_led(False)
     fp.close()
 
