@@ -15,7 +15,7 @@ from kivy.uix.scrollview import ScrollView
 from kivy.app import App 
 from kivy.clock import Clock
 from asyncio import get_event_loop
-from employee_sync import RUNTIME_DIR, IMAGES_DIR, fp,on_touch_callback
+from employee_sync import RUNTIME_DIR, IMAGES_DIR, fp
 from fplib import fplib
 from popups import PopupUtils
 from helper import HelperUtils
@@ -217,7 +217,8 @@ class EnrollScreen(Screen):
 
     async def perform_enroll(self, id): 
         PopupUtils.update_status_popup("Please place finger...", 3)
-        on_touch_callback = self.touch_callback
+        import employee_sync
+        employee_sync.on_touch_callback = self.touch_callback 
         print("Touch callback Added")
         await asyncio.sleep(10)
         PopupUtils.dismiss_status_popup()

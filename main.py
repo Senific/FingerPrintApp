@@ -35,7 +35,7 @@ from settingsScreen import SettingsScreen
 from employeeListScreen import EmployeeListScreen
 from MarkAttendanceScreen  import MarkAttendanceScreen
 from AttendancesScreen import AttendancesScreen
-from employee_sync import EmployeeSync, EmployeeDatabase, SETTINGS_FILE,fp,on_touch_callback
+from employee_sync import EmployeeSync, EmployeeDatabase, SETTINGS_FILE,fp
 from popups import PopupUtils
 
 db = EmployeeDatabase()
@@ -91,7 +91,8 @@ def on_touch(gpio, level, tick):
             print("✋ Finger released")
     else: 
         try:
-            if on_touch_callback is not None:
+            from employee_sync import on_touch_callback
+            if  on_touch_callback is not None:
                 print("Touch Callback is Active")
                 logging.info("Touch Callback is Active")
                 touchResult = level = 0
