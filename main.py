@@ -93,11 +93,14 @@ def on_touch(gpio, level, tick):
         try:
             if on_touch_callback is not None:
                 print("Touch Callback is Active")
+                logging.log("Touch Callback is Active")
                 on_touch_callback(level == 0)
             else:
                 print("Touch Callback is None")
+                logging.log("Touch Callback is None")
         except Exception as ex:
             print(f"Touch Callback is Error: {ex}")
+            logging.error(f"Touch Callback is Error: {ex}")
  
 async def identify():  
     try:    
