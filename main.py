@@ -83,9 +83,7 @@ def on_touch(gpio, level, tick):
     if level == 0: 
         Clock.schedule_once(lambda dt: asyncio.ensure_future(Identify()))
         print("👆 Finger touched")
-    elif level == 1:
-        fp.set_led(False)
-        fp.close()
+    elif level == 1: 
         print("✋ Finger released")
 
 async def Identify():  
@@ -103,10 +101,12 @@ async def Identify():
                         app.employee_to_enroll = employee
                         app.root.current = "mark" 
                     else: 
-                        print("No employee found for identifier!")
+                        print("No employee found for identifier in DB!")
                 except Exception as e:
                     print(f"Identify Exception: {e}")
                     logging.error(f"Identify Exception: {e}")  
+            else: 
+                print("No employee found for finger!")
     except Exception as e: 
             print(f"Identify.2 Exception : {e}")
             logging.error(f"Identify.2 Exception: {e}") 
