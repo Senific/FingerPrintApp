@@ -20,6 +20,7 @@ from fplib import fplib
 from popups import PopupUtils
 from helper import HelperUtils
 from apiUtill import ApiUtils  
+import employee_sync
 
 class EnrollScreen(Screen): 
     fp : fplib = None
@@ -202,6 +203,7 @@ class EnrollScreen(Screen):
                         PopupUtils.update_status_popup("Failed while uploading!", 1)
                         fp.delete(idx) 
                         
+                        
                     self.enrolling_in_progress = False
                     self.enroll_popup.dismiss()
                     self.on_pre_enter()
@@ -211,13 +213,14 @@ class EnrollScreen(Screen):
             else: 
                 PopupUtils.update_status_popup("Enrolling Failed!", 1)
                 await asyncio.sleep(2) 
+            
+            employee_sync.on_touch_callback = self.touch_callback 
             self.enrolling_in_progress = False
             PopupUtils.dismiss_status_popup()
     
 
     async def perform_enroll(self, id): 
         PopupUtils.update_status_popup("Please place finger...", 3)
-        import employee_sync
         employee_sync.on_touch_callback = self.touch_callback 
         print("Touch callback Added")
         await asyncio.sleep(10)
