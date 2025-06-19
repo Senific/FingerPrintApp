@@ -2,6 +2,14 @@ import pigpio
 import time
 from fplib import fplib
 
+# fingerprint module variables
+fp = fplib()
+
+# module initializing
+init = fp.init()
+print("is initialized :", init)
+
+
 TOUCH_PIN = 5  # GPIO5 (Physical pin 29)
 
 def on_touch(gpio, level, tick):
