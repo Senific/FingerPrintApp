@@ -36,7 +36,7 @@ from employeeListScreen import EmployeeListScreen
 from MarkAttendanceScreen  import MarkAttendanceScreen
 from AttendancesScreen import AttendancesScreen
 from employee_sync import EmployeeSync, EmployeeDatabase, SETTINGS_FILE,fp
-
+from popups import PopupUtils
 
 db = EmployeeDatabase()
 
@@ -81,12 +81,12 @@ import pigpio
 TOUCH_PIN = 5  # GPIO5 (Physical pin 29)
 def on_touch(gpio, level, tick):
     if level == 0: 
-        Clock.schedule_once(lambda dt: asyncio.ensure_future(Identify()))
+        Clock.schedule_once(lambda dt: asyncio.ensure_future(identify()))
         print("👆 Finger touched")
     elif level == 1: 
         print("✋ Finger released")
 
-async def Identify():  
+async def identify():  
     try:    
         fp.open()
         fp.set_led(True) 
@@ -100,16 +100,20 @@ async def Identify():
                     if employee is not None: 
                         app.employee_to_enroll = employee
                         app.root.current = "mark" 
+                        await asyncio.sleep(2)
+                        app.root.current = "main"
                     else: 
                         print("No employee found for identifier in DB!")
                 except Exception as e:
                     print(f"Identify Exception: {e}")
                     logging.error(f"Identify Exception: {e}")  
+                    on_validation_failed()
             else: 
                 print("No employee found for finger!")
     except Exception as e: 
             print(f"Identify.2 Exception : {e}")
             logging.error(f"Identify.2 Exception: {e}") 
+            on_validation_failed()
     finally:
         try:
             fp.set_led(False)
@@ -117,6 +121,13 @@ async def Identify():
         except Exception as e:
             print(f"Identify.3 Exception : {e}")
             logging.error(f"Identify.3 Exception: {e}") 
+            on_validation_failed()
+
+async def on_validation_failed():
+    PopupUtils.show_status_popup()
+    PopupUtils.update_status_popup("Failed to Identify!" , 1)
+    await asyncio.sleep(1)
+    PopupUtils.dismiss_status_popup()
 
 # Connect to pigpio daemon
 pi = pigpio.pi()
@@ -191,12 +202,11 @@ class BackgroundSyncThread(threading.Thread):
 
    
 if __name__ == "__main__": 
-    # try:
-    #     sync_thread = BackgroundSyncThread()
-    #     sync_thread.start()  
-    # except Exception as e:
-    #     logging.error(f"Background sync failed to start: {e}")
-
+    try:
+        sync_thread = BackgroundSyncThread()
+        sync_thread.start()  
+    except Exception as e:
+        logging.error(f"Background sync failed to start: {e}")
 
     try:
         FingerprintApp().run()
