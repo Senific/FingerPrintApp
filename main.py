@@ -90,12 +90,19 @@ def on_touch(gpio, level, tick):
         fp.close()
         print("✋ Finger released")
 
-async def Identify(): 
+async def Identify():  
     if fp.is_finger_pressed():
         identifier = fp.identify()
-        App.get_running_app().root.current = "mark"
+        if identifier is not None:  
+            try:
+                App.get_running_app().root.current = "mark" 
+            except Exception as e:
+                print(f"Identify Exception: {e}")
+                logging.error(f"Identify Exception: {e}") 
         fp.set_led(True)
         fp.close()
+
+
 
 # Connect to pigpio daemon
 pi = pigpio.pi()
