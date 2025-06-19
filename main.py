@@ -100,7 +100,7 @@ async def identify():
                     if employee is not None: 
                         app.employee_to_enroll = employee
                         app.root.current = "mark" 
-                        await asyncio.sleep(2)
+                        await asyncio.sleep(5)
                         app.root.current = "main"
                     else: 
                         print("No employee found for identifier in DB!")
@@ -126,7 +126,7 @@ async def identify():
 async def on_validation_failed():
     PopupUtils.show_status_popup()
     PopupUtils.update_status_popup("Failed to Identify!" , 1)
-    await asyncio.sleep(1)
+    await asyncio.sleep(5)
     PopupUtils.dismiss_status_popup()
 
 # Connect to pigpio daemon
