@@ -123,8 +123,7 @@ class EmployeeDatabase:
 
             query = """
             SELECT * FROM Employees
-            WHERE Deleted = 0
-            AND ',' || Identifiers || ',' LIKE ?;
+            WHERE ',' || Identifiers || ',' LIKE ?;
             """
             param = f'%,{identifier},%'  # Comma-wrapped identifier search
             cursor = await db.execute(query, (param,))
