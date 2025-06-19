@@ -125,13 +125,13 @@ async def identify():
                 except Exception as e:
                     print(f"Identify Exception: {e}")
                     logging.error(f"Identify Exception: {e}")  
-                    on_validation_failed()
+                    await on_validation_failed()
             else: 
                 print("No employee found for finger!")
     except Exception as e: 
             print(f"Identify.2 Exception : {e}")
             logging.error(f"Identify.2 Exception: {e}") 
-            on_validation_failed()
+            await on_validation_failed()
     finally:
         try:
             fp.set_led(False)
@@ -139,7 +139,7 @@ async def identify():
         except Exception as e:
             print(f"Identify.3 Exception : {e}")
             logging.error(f"Identify.3 Exception: {e}") 
-            on_validation_failed()
+            await on_validation_failed()
 
 async def on_validation_failed():
     PopupUtils.show_status_popup()
