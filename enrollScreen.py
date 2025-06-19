@@ -182,11 +182,7 @@ class EnrollScreen(Screen):
         PopupUtils.dismiss_status_popup()        
  
     enrolling_in_progress = False
-
-    def touch_callback(self, touched):
-        Clock.schedule_once(lambda dt: asyncio.ensure_future(self.touch_callback(touched)))
-
-    
+ 
     async def touch_callback(self, touched):
         if self.enrolling_in_progress == True:
             return
