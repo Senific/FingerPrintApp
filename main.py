@@ -107,13 +107,13 @@ if is_raspberry:
                     except Exception as e:
                         print(f"Identify Exception: {e}")
                         logging.error(f"Identify Exception: {e}")  
-                        await on_validation_failed()
+                        Clock.schedule_once(lambda dt: asyncio.ensure_future(on_validation_failed()))
                 else: 
                     print("No employee found for finger!")
         except Exception as e: 
                 print(f"Identify.2 Exception : {e}")
                 logging.error(f"Identify.2 Exception: {e}") 
-                await on_validation_failed()
+                Clock.schedule_once(lambda dt: asyncio.ensure_future(on_validation_failed()))
         finally:
             try:
                 fp.set_led(False)
@@ -121,7 +121,7 @@ if is_raspberry:
             except Exception as e:
                 print(f"Identify.3 Exception : {e}")
                 logging.error(f"Identify.3 Exception: {e}") 
-                await on_validation_failed()
+                Clock.schedule_once(lambda dt: asyncio.ensure_future(on_validation_failed()))
 
 
     def on_touch(gpio, level, tick):
