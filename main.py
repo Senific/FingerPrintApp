@@ -125,13 +125,13 @@ if is_raspberry:
                     except Exception as e:
                         print(f"Identify Exception: {e}")
                         logging.error(f"Identify Exception: {e}")  
-                        await on_validation_failed()
+                        on_validation_failed()
                 else: 
                     print("No employee found for finger!")
         except Exception as e: 
                 print(f"Identify.2 Exception : {e}")
                 logging.error(f"Identify.2 Exception: {e}") 
-                await on_validation_failed()
+                on_validation_failed()
         finally:
             try:
                 fp.set_led(False)
@@ -139,13 +139,13 @@ if is_raspberry:
             except Exception as e:
                 print(f"Identify.3 Exception : {e}")
                 logging.error(f"Identify.3 Exception: {e}") 
-                await on_validation_failed()
+                on_validation_failed()
 
-    async def on_validation_failed():
-        PopupUtils.show_status_popup()
-        PopupUtils.update_status_popup("Failed to Identify!" , 1)
-        await asyncio.sleep(5)
-        PopupUtils.dismiss_status_popup()
+    def on_validation_failed(): 
+        Clock.schedule_once(lambda dt:PopupUtils.show_status_popup())
+        Clock.schedule_once(lambda dt: PopupUtils.update_status_popup("Failed to Identify!" , 1),)
+        #await asyncio.sleep(5)
+        Clock.schedule_once(lambda dt: PopupUtils.dismiss_status_popup(), 5) 
 
     # Connect to pigpio daemon
     pi = pigpio.pi()
