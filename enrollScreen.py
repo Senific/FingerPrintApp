@@ -15,12 +15,11 @@ from kivy.uix.scrollview import ScrollView
 from kivy.app import App 
 from kivy.clock import Clock
 from asyncio import get_event_loop
-from employee_sync import RUNTIME_DIR, IMAGES_DIR, fp
+from employee_sync import RUNTIME_DIR, IMAGES_DIR, fp,on_touch_callback
 from fplib import fplib
 from popups import PopupUtils
 from helper import HelperUtils
-from apiUtill import ApiUtils 
-from main import on_touch_callback
+from apiUtill import ApiUtils  
 
 class EnrollScreen(Screen): 
     fp : fplib = None

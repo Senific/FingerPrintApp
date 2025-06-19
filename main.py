@@ -35,7 +35,7 @@ from settingsScreen import SettingsScreen
 from employeeListScreen import EmployeeListScreen
 from MarkAttendanceScreen  import MarkAttendanceScreen
 from AttendancesScreen import AttendancesScreen
-from employee_sync import EmployeeSync, EmployeeDatabase, SETTINGS_FILE,fp
+from employee_sync import EmployeeSync, EmployeeDatabase, SETTINGS_FILE,fp,on_touch_callback
 from popups import PopupUtils
 
 db = EmployeeDatabase()
@@ -80,7 +80,7 @@ Window.top = (Window.system_size[1] - 320) // 2
 import pigpio 
 TOUCH_PIN = 5  # GPIO5 (Physical pin 29)
 
-on_touch_callback  = None
+
 
 def on_touch(gpio, level, tick):
     if App.get_running_app().root.current == "main":

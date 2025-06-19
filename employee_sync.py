@@ -15,7 +15,7 @@ fp = fplib()
 init = fp.init()
 print("is initialized:", init)
 
-
+on_touch_callback  = None
 
 # 🔧 Constants
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
