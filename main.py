@@ -80,12 +80,16 @@ if is_raspberry:
     import pigpio 
     TOUCH_PIN = 5  # GPIO5 (Physical pin 29)
 
-
+    async def on_validation_failed():
+            PopupUtils.show_status_popup()
+            PopupUtils.update_status_popup("Failed to Identify!" , 1)
+            await asyncio.sleep(5)
+            PopupUtils.dismiss_status_popup()
 
     def on_touch(gpio, level, tick):
         if App.get_running_app().root.current == "main":
             if level == 0: 
-                Clock.schedule_once(lambda dt: asyncio.ensure_future(identify()))
+                Clock.schedule_once(lambda dt: asyncio.ensure_future(on_validation_failed))  #asyncio.ensure_future(identify()))
                 print("👆 Finger touched")
             elif level == 1: 
                 print("✋ Finger released")
@@ -125,13 +129,13 @@ if is_raspberry:
                     except Exception as e:
                         print(f"Identify Exception: {e}")
                         logging.error(f"Identify Exception: {e}")  
-                        on_validation_failed()
+                        await on_validation_failed()
                 else: 
                     print("No employee found for finger!")
         except Exception as e: 
                 print(f"Identify.2 Exception : {e}")
                 logging.error(f"Identify.2 Exception: {e}") 
-                on_validation_failed()
+                await on_validation_failed()
         finally:
             try:
                 fp.set_led(False)
@@ -139,13 +143,9 @@ if is_raspberry:
             except Exception as e:
                 print(f"Identify.3 Exception : {e}")
                 logging.error(f"Identify.3 Exception: {e}") 
-                on_validation_failed()
+                await on_validation_failed()
 
-    def on_validation_failed(): 
-        Clock.schedule_once(lambda dt:PopupUtils.show_status_popup())
-        Clock.schedule_once(lambda dt: PopupUtils.update_status_popup("Failed to Identify!" , 1),)
-        #await asyncio.sleep(5)
-        Clock.schedule_once(lambda dt: PopupUtils.dismiss_status_popup(), 5) 
+  
 
     # Connect to pigpio daemon
     pi = pigpio.pi()
