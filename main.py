@@ -85,29 +85,7 @@ if is_raspberry:
             PopupUtils.update_status_popup("Failed to Identify!" , 1)
             await asyncio.sleep(5)
             PopupUtils.dismiss_status_popup()
-
-    def on_touch(gpio, level, tick):
-        if App.get_running_app().root.current == "main":
-            if level == 0: 
-                Clock.schedule_once(lambda dt: asyncio.ensure_future(on_validation_failed()))  #asyncio.ensure_future(identify()))
-                print("👆 Finger touched")
-            elif level == 1: 
-                print("✋ Finger released")
-        else: 
-            try:
-                from employee_sync import on_touch_callback
-                if  on_touch_callback is not None:
-                    print("Touch Callback is Active")
-                    logging.info("Touch Callback is Active")
-                    touchResult = level = 0
-                    Clock.schedule_once(lambda dt: asyncio.ensure_future(on_touch_callback(touchResult)))
-                else:
-                    print("Touch Callback is None")
-                    logging.info("Touch Callback is None")
-            except Exception as ex:
-                print(f"Touch Callback is Error: {ex}")
-                logging.error(f"Touch Callback is Error: {ex}")
-    
+ 
     async def identify():  
         try:    
             fp.open()
@@ -145,6 +123,28 @@ if is_raspberry:
                 logging.error(f"Identify.3 Exception: {e}") 
                 await on_validation_failed()
 
+
+    def on_touch(gpio, level, tick):
+        if App.get_running_app().root.current == "main":
+            if level == 0: 
+                Clock.schedule_once(lambda dt: asyncio.ensure_future(identify()))
+                print("👆 Finger touched")
+            elif level == 1: 
+                print("✋ Finger released")
+        else: 
+            try:
+                from employee_sync import on_touch_callback
+                if  on_touch_callback is not None:
+                    print("Touch Callback is Active")
+                    logging.info("Touch Callback is Active")
+                    touchResult = level = 0
+                    Clock.schedule_once(lambda dt: asyncio.ensure_future(on_touch_callback(touchResult)))
+                else:
+                    print("Touch Callback is None")
+                    logging.info("Touch Callback is None")
+            except Exception as ex:
+                print(f"Touch Callback is Error: {ex}")
+                logging.error(f"Touch Callback is Error: {ex}")
   
 
     # Connect to pigpio daemon
