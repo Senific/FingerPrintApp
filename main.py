@@ -98,7 +98,7 @@ async def Identify():
         if identifier is not None:  
             try:
                 app =  App.get_running_app() 
-                employee = db.get_employeeByIdentifier(identifier)
+                employee = await db.get_employeeByIdentifier(identifier)
                 if employee is not None: 
                     app.employee_to_enroll = employee
                     app.root.current = "mark" 
