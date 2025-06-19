@@ -96,7 +96,7 @@ async def Identify():
     try:    
         if fp.is_finger_pressed():
             identifier = fp.identify()
-            if identifier is not None:  
+            if identifier is not None and identifier >= 0:  
                 try:
                     print(f"Identified: {identifier}")
                     app =  App.get_running_app()  
