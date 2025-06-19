@@ -186,6 +186,11 @@ class EnrollScreen(Screen):
     async def touch_callback(self, touched):
         if self.enrolling_in_progress == True:
             return
+        self.enrolling_in_progress = True
+
+        fp.set_led(True)
+        await asyncio.sleep(1)
+        fp.set_led(False)
 
         if touched == True:
             PopupUtils.update_status_popup("Checking", 0)
@@ -214,7 +219,7 @@ class EnrollScreen(Screen):
                 PopupUtils.update_status_popup("Enrolling Failed!", 1)
                 await asyncio.sleep(2) 
             
-            employee_sync.on_touch_callback = self.touch_callback 
+            employee_sync.on_touch_callback = None 
             self.enrolling_in_progress = False
             PopupUtils.dismiss_status_popup()
     
