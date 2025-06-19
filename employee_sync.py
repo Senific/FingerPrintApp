@@ -3,7 +3,6 @@ import os
 import httpx
 import aiosqlite
 import json
-import pigpio
 from urllib.parse import quote
 from cryptography.fernet import Fernet
 from datetime import datetime, timedelta
@@ -16,30 +15,6 @@ fp = fplib()
 init = fp.init()
 print("is initialized:", init)
 
-
-TOUCH_PIN = 5  # GPIO5 (Physical pin 29)
-
-def on_touch(gpio, level, tick):
-    if level == 0:
-        fp.open()
-        fp.set_led(True)
-        print("👆 Finger touched")
-    elif level == 1:
-        fp.set_led(False)
-        fp.close()
-        print("✋ Finger released")
-
-# Connect to pigpio daemon
-pi = pigpio.pi()
-if not pi.connected:
-    print("❌ Failed to connect to pigpiod. Is it running?")
-    exit(1)
-
-# Set the pin as input
-pi.set_mode(TOUCH_PIN, pigpio.INPUT)
-
-# Register callback on both edges
-pi.callback(TOUCH_PIN, pigpio.EITHER_EDGE, on_touch)
 
 
 # 🔧 Constants

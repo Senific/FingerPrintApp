@@ -37,6 +37,7 @@ from MarkAttendanceScreen  import MarkAttendanceScreen
 from AttendancesScreen import AttendancesScreen
 from employee_sync import EmployeeSync, EmployeeDatabase, SETTINGS_FILE,fp
 
+
 # Global asyncio loop instance
 async_loop = asyncio.new_event_loop()
 asyncio.set_event_loop(async_loop)
@@ -73,7 +74,45 @@ Window.fullscreen = False
 Window.left = (Window.system_size[0] - 480) // 2
 Window.top = (Window.system_size[1] - 320) // 2
 
- 
+
+import pigpio
+TOUCH_PIN = 5  # GPIO5 (Physical pin 29)
+def on_touch(gpio, level, tick):
+    if level == 0:
+        fp.open()
+        fp.set_led(True) 
+        # if fp.is_finger_pressed(): 
+        #     fp.set_led()    
+        Clock.schedule_once(lambda dt: asyncio.ensure_future(Identify()))
+        print("👆 Finger touched")
+    elif level == 1:
+        fp.set_led(False)
+        fp.close()
+        print("✋ Finger released")
+
+async def Identify(): 
+    if fp.is_finger_pressed():
+        asyncio.sleep(.2)
+        fp.set_led(False)
+        asyncio.sleep(.2)
+        fp.set_led(True)
+        asyncio.sleep(.2)
+        fp.set_led(False)
+        asyncio.sleep(.2)
+        fp.set_led(True)
+
+# Connect to pigpio daemon
+pi = pigpio.pi()
+if not pi.connected:
+    print("❌ Failed to connect to pigpiod. Is it running?")
+    exit(1)
+
+# Set the pin as input
+pi.set_mode(TOUCH_PIN, pigpio.INPUT)
+
+# Register callback on both edges
+pi.callback(TOUCH_PIN, pigpio.EITHER_EDGE, on_touch)
+
 
  
 class FingerprintApp(App):
