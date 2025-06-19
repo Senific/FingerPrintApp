@@ -17,18 +17,26 @@ is_raspberry_pi = platform.system() != "Windows"
 
 
 if is_raspberry_pi:
-    import board
-    import busio
-    from adafruit_ads1x15.ads1115 import ADS1115
-    from adafruit_ads1x15.analog_in import AnalogIn 
-    i2c = busio.I2C(board.SCL, board.SDA)
-    ads = ADS1115(i2c)
-    adc_channel = AnalogIn(ads, 0)
+    try:
+        import board
+        import busio
+        from adafruit_ads1x15.ads1115 import ADS1115
+        from adafruit_ads1x15.analog_in import AnalogIn 
+
+        i2c = busio.I2C(board.SCL, board.SDA)
+        ads = ADS1115(i2c)
+        adc_channel = AnalogIn(ads, 0)
+    except Exception as e:
+        print(f"[ADS1115] Initialization failed: {e}")
+        class DummyChannel:
+            voltage = 0.0
+        adc_channel = DummyChannel()
 else:
-    print("Running on Windows: skipping ADS1115 setup.")
+    print("[ADS1115] Skipping setup (not a Raspberry Pi).")
     class DummyChannel:
         voltage = 0.0
     adc_channel = DummyChannel()
+
 
 class IdleScreen(Screen):
     def __init__(self, **kwargs):
@@ -145,25 +153,29 @@ class IdleScreen(Screen):
         return 0
 
     def get_battery_percentage(self): 
-        #Using Ohoms Law, Caused used resistor to create a voltage Divotor to lower the Input for ADS1115 A0 
-        real_voltage = adc_channel.voltage * (110 / 10)
+        try:
+            real_voltage = adc_channel.voltage * (110 / 10)
+        except Exception as e:
+            print(f"[Battery] Voltage read failed: {e}")
+            real_voltage = 0.0
+
         charged_voltage = 12.4
-        #warning_voltage = 9.6
         shutdown_voltage = 9.2
 
         fullyDelta = charged_voltage - shutdown_voltage
         delta = real_voltage - shutdown_voltage
-        percentage =   int((delta / fullyDelta) * 100)
-        
-        if percentage < 20:  
-            self.batterylow_label.opacity = 1
-        else:
-            self.batterylow_label.opacity = 0
+        percentage = int((delta / fullyDelta) * 100)
+
+        # Clamp and display
+        percentage = max(0, min(percentage, 100))
+
+        self.batterylow_label.opacity = 1 if percentage < 20 else 0
 
         if percentage <= 0:
             threading.Thread(target=lambda: os.system("sudo poweroff")).start()
 
-        return F"{percentage}%" 
+        return f"{percentage}%"
+
     
     def on_touch_down(self, touch):
         self.manager.current = "menu"
