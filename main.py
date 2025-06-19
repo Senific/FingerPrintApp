@@ -76,88 +76,88 @@ Window.fullscreen = False
 Window.left = (Window.system_size[0] - 480) // 2
 Window.top = (Window.system_size[1] - 320) // 2
 
+if is_raspberry:
+    import pigpio 
+    TOUCH_PIN = 5  # GPIO5 (Physical pin 29)
 
-import pigpio 
-TOUCH_PIN = 5  # GPIO5 (Physical pin 29)
 
 
+    def on_touch(gpio, level, tick):
+        if App.get_running_app().root.current == "main":
+            if level == 0: 
+                Clock.schedule_once(lambda dt: asyncio.ensure_future(identify()))
+                print("👆 Finger touched")
+            elif level == 1: 
+                print("✋ Finger released")
+        else: 
+            try:
+                from employee_sync import on_touch_callback
+                if  on_touch_callback is not None:
+                    print("Touch Callback is Active")
+                    logging.info("Touch Callback is Active")
+                    touchResult = level = 0
+                    Clock.schedule_once(lambda dt: asyncio.ensure_future(on_touch_callback(touchResult)))
+                else:
+                    print("Touch Callback is None")
+                    logging.info("Touch Callback is None")
+            except Exception as ex:
+                print(f"Touch Callback is Error: {ex}")
+                logging.error(f"Touch Callback is Error: {ex}")
+    
+    async def identify():  
+        try:    
+            fp.open()
+            fp.set_led(True) 
+            if fp.is_finger_pressed():
+                identifier = fp.identify()
+                if identifier is not None and identifier >= 0:  
+                    try:
+                        print(f"Identified: {identifier}")
+                        app =  App.get_running_app()  
+                        employee = await db.get_employeeByIdentifier(identifier)
+                        if employee is not None: 
+                            app.employee_to_enroll = employee
+                            app.root.current = "mark" 
+                            await asyncio.sleep(5)
+                            app.root.current = "main"
+                        else: 
+                            print("No employee found for identifier in DB!")
+                    except Exception as e:
+                        print(f"Identify Exception: {e}")
+                        logging.error(f"Identify Exception: {e}")  
+                        await on_validation_failed()
+                else: 
+                    print("No employee found for finger!")
+        except Exception as e: 
+                print(f"Identify.2 Exception : {e}")
+                logging.error(f"Identify.2 Exception: {e}") 
+                await on_validation_failed()
+        finally:
+            try:
+                fp.set_led(False)
+                fp.close()
+            except Exception as e:
+                print(f"Identify.3 Exception : {e}")
+                logging.error(f"Identify.3 Exception: {e}") 
+                await on_validation_failed()
 
-def on_touch(gpio, level, tick):
-    if App.get_running_app().root.current == "main":
-        if level == 0: 
-            Clock.schedule_once(lambda dt: asyncio.ensure_future(identify()))
-            print("👆 Finger touched")
-        elif level == 1: 
-            print("✋ Finger released")
-    else: 
-        try:
-            from employee_sync import on_touch_callback
-            if  on_touch_callback is not None:
-                print("Touch Callback is Active")
-                logging.info("Touch Callback is Active")
-                touchResult = level = 0
-                Clock.schedule_once(lambda dt: asyncio.ensure_future(on_touch_callback(touchResult)))
-            else:
-                print("Touch Callback is None")
-                logging.info("Touch Callback is None")
-        except Exception as ex:
-            print(f"Touch Callback is Error: {ex}")
-            logging.error(f"Touch Callback is Error: {ex}")
- 
-async def identify():  
-    try:    
-        fp.open()
-        fp.set_led(True) 
-        if fp.is_finger_pressed():
-            identifier = fp.identify()
-            if identifier is not None and identifier >= 0:  
-                try:
-                    print(f"Identified: {identifier}")
-                    app =  App.get_running_app()  
-                    employee = await db.get_employeeByIdentifier(identifier)
-                    if employee is not None: 
-                        app.employee_to_enroll = employee
-                        app.root.current = "mark" 
-                        await asyncio.sleep(5)
-                        app.root.current = "main"
-                    else: 
-                        print("No employee found for identifier in DB!")
-                except Exception as e:
-                    print(f"Identify Exception: {e}")
-                    logging.error(f"Identify Exception: {e}")  
-                    await on_validation_failed()
-            else: 
-                print("No employee found for finger!")
-    except Exception as e: 
-            print(f"Identify.2 Exception : {e}")
-            logging.error(f"Identify.2 Exception: {e}") 
-            await on_validation_failed()
-    finally:
-        try:
-            fp.set_led(False)
-            fp.close()
-        except Exception as e:
-            print(f"Identify.3 Exception : {e}")
-            logging.error(f"Identify.3 Exception: {e}") 
-            await on_validation_failed()
+    async def on_validation_failed():
+        PopupUtils.show_status_popup()
+        PopupUtils.update_status_popup("Failed to Identify!" , 1)
+        await asyncio.sleep(5)
+        PopupUtils.dismiss_status_popup()
 
-async def on_validation_failed():
-    PopupUtils.show_status_popup()
-    PopupUtils.update_status_popup("Failed to Identify!" , 1)
-    await asyncio.sleep(5)
-    PopupUtils.dismiss_status_popup()
+    # Connect to pigpio daemon
+    pi = pigpio.pi()
+    if not pi.connected:
+        print("❌ Failed to connect to pigpiod. Is it running?")
+        exit(1)
 
-# Connect to pigpio daemon
-pi = pigpio.pi()
-if not pi.connected:
-    print("❌ Failed to connect to pigpiod. Is it running?")
-    exit(1)
+    # Set the pin as input
+    pi.set_mode(TOUCH_PIN, pigpio.INPUT)
 
-# Set the pin as input
-pi.set_mode(TOUCH_PIN, pigpio.INPUT)
-
-# Register callback on both edges
-pi.callback(TOUCH_PIN, pigpio.EITHER_EDGE, on_touch)
+    # Register callback on both edges
+    pi.callback(TOUCH_PIN, pigpio.EITHER_EDGE, on_touch)
 
 
  
