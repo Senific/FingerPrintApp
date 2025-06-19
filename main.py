@@ -93,32 +93,36 @@ def on_touch(gpio, level, tick):
         print("✋ Finger released")
 
 async def Identify():  
-    if fp.is_finger_pressed():
-        identifier = fp.identify()
-        if identifier is not None:  
-            try:
-                print(f"Identified: {identifier}")
-                app =  App.get_running_app()  
-                employee = await db.get_employeeByIdentifier(identifier)
-                if employee is not None: 
-                    app.employee_to_enroll = employee
-                    app.root.current = "mark" 
-                else: 
-                    fp.set_led(False)
-                    await asyncio.sleep(.2)
-                    fp.set_led(True)
-                    await asyncio.sleep(.2)
-                    fp.set_led(False)
-                    await asyncio.sleep(.2)
-                    fp.set_led(True)
-                    await asyncio.sleep(.2)
-                    fp.set_led(False)
-                    await asyncio.sleep(.2)
-            except Exception as e:
-                print(f"Identify Exception: {e}")
-                logging.error(f"Identify Exception: {e}") 
-    fp.set_led(False)
-    fp.close()
+    try:    
+        if fp.is_finger_pressed():
+            identifier = fp.identify()
+            if identifier is not None:  
+                try:
+                    print(f"Identified: {identifier}")
+                    app =  App.get_running_app()  
+                    employee = await db.get_employeeByIdentifier(identifier)
+                    if employee is not None: 
+                        app.employee_to_enroll = employee
+                        app.root.current = "mark" 
+                    else: 
+                        fp.set_led(False)
+                        await asyncio.sleep(.2)
+                        fp.set_led(True)
+                        await asyncio.sleep(.2)
+                        fp.set_led(False)
+                        await asyncio.sleep(.2)
+                        fp.set_led(True)
+                        await asyncio.sleep(.2)
+                        fp.set_led(False)
+                        await asyncio.sleep(.2)
+                except Exception as e:
+                    print(f"Identify Exception: {e}")
+                    logging.error(f"Identify Exception: {e}") 
+        fp.set_led(False)
+        fp.close()
+    except Exception as e: 
+            print(f"Identify.2 Exception : {e}")
+            logging.error(f"Identify Exception: {e}") 
 
 
 
