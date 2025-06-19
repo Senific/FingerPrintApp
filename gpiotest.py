@@ -1,22 +1,35 @@
-import RPi.GPIO as GPIO
+import pigpio
 import time
+from fplib import fplib
 
-TOUCH_PIN = 5  # GPIO5
+TOUCH_PIN = 5  # GPIO5 (Physical pin 29)
 
-GPIO.setmode(GPIO.BCM)
+def on_touch(gpio, level, tick):
+    if level == 0:
+        fplib.open()
+        fplib.set_led(True)
+        print("👆 Finger touched")
+    elif level == 1:
+        fplib.set_led(False)
+        fplib.close()
+        print("✋ Finger released")
 
-# Use pull-up if external transistor pulls low
-GPIO.setup(TOUCH_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+# Connect to pigpio daemon
+pi = pigpio.pi()
+if not pi.connected:
+    print("❌ Failed to connect to pigpiod. Is it running?")
+    exit(1)
 
-def touched(channel):
-    print("👆 Touch Detected")
+# Set the pin as input
+pi.set_mode(TOUCH_PIN, pigpio.INPUT)
 
+# Register callback on both edges
+pi.callback(TOUCH_PIN, pigpio.EITHER_EDGE, on_touch)
+
+print("📡 Waiting for finger touch/release... Press Ctrl+C to stop.")
 try:
-    GPIO.add_event_detect(TOUCH_PIN, GPIO.FALLING, callback=touched, bouncetime=200)
-    print("✅ Ready, waiting for touch...")
     while True:
         time.sleep(1)
-except RuntimeError as e:
-    print("❌ RuntimeError:", e)
-finally:
-    GPIO.cleanup()
+except KeyboardInterrupt:
+    print("\n🧹 Cleaning up...")
+    pi.stop()
