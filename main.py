@@ -95,11 +95,26 @@ async def Identify():
         identifier = fp.identify()
         if identifier is not None:  
             try:
-                App.get_running_app().root.current = "mark" 
+                app =  App.get_running_app() 
+                employee = EmployeeDatabase.get_employeeByIdentifier(identifier)
+                if employee is not None: 
+                    app.employee_to_enroll = employee
+                    app.root.current = "mark" 
+                else: 
+                    fp.set_led(False)
+                    await asyncio.sleep(.2)
+                    fp.set_led(True)
+                    await asyncio.sleep(.2)
+                    fp.set_led(False)
+                    await asyncio.sleep(.2)
+                    fp.set_led(True)
+                    await asyncio.sleep(.2)
+                    fp.set_led(False)
+                    await asyncio.sleep(.2)
             except Exception as e:
                 print(f"Identify Exception: {e}")
                 logging.error(f"Identify Exception: {e}") 
-        fp.set_led(True)
+        fp.set_led(False)
         fp.close()
 
 

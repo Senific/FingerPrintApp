@@ -116,7 +116,23 @@ class EmployeeDatabase:
             row = await cursor.fetchone()
             await cursor.close()
             return row   
-        
+  
+    async def get_employeeByIdentifier(self, identifier: int):
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row  # Allows dict-like access
+
+            query = """
+            SELECT * FROM Employees
+            WHERE Deleted = 0
+            AND ',' || Identifiers || ',' LIKE ?;
+            """
+            param = f'%,{identifier},%'  # Comma-wrapped identifier search
+            cursor = await db.execute(query, (param,))
+            row = await cursor.fetchone()
+            await cursor.close()
+            return row
+
+
 class EmployeeSync:
     def __init__(self, db: EmployeeDatabase, sync_file=None):
         config = get_api_config()
