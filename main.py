@@ -83,15 +83,21 @@ TOUCH_PIN = 5  # GPIO5 (Physical pin 29)
 
 
 def on_touch(gpio, level, tick):
-    #if App.get_running_app().root.current == "main":
+    if App.get_running_app().root.current == "main":
         if level == 0: 
             Clock.schedule_once(lambda dt: asyncio.ensure_future(identify()))
             print("👆 Finger touched")
         elif level == 1: 
             print("✋ Finger released")
-    # else:
-    #     if on_touch_callback is not None:
-    #         on_touch_callback(level == 0)
+    else: 
+        try:
+            if on_touch_callback is not None:
+                print("Touch Callback is Active")
+                on_touch_callback(level == 0)
+            else:
+                print("Touch Callback is None")
+        except Exception as ex:
+            print(f"Touch Callback is Error: {ex}")
  
 async def identify():  
     try:    
