@@ -218,6 +218,7 @@ class EnrollScreen(Screen):
     async def perform_enroll(self, id): 
         PopupUtils.update_status_popup("Please place finger...", 3)
         on_touch_callback = self.touch_callback
+        print("Touch callback Added")
         await asyncio.sleep(10)
         PopupUtils.dismiss_status_popup()
        
