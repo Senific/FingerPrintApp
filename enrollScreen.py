@@ -214,9 +214,9 @@ class EnrollScreen(Screen):
                     PopupUtils.update_status_popup("Enrolling Failed!", 1)
                     await asyncio.sleep(2) 
                 self.enrolling_in_progress = False
-        
+                PopupUtils.dismiss_status_popup()
         on_touch_callback = touch_callback
-        PopupUtils.dismiss_status_popup()
+       
          
      
     def enrollStatus_Callback(self, msg):
