@@ -119,7 +119,7 @@ if is_raspberry:
                             marked_time =  datetime.now()
                             app.marked_employee = employee
                             app.marked_time = marked_time
-                            result = db.insert_attendance(employee, marked_time)
+                            result = await db.insert_attendance(employee, marked_time)
                             if result == True: 
                                 app.root.current = "mark" 
                                 await asyncio.sleep(5)
