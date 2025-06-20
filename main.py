@@ -100,7 +100,7 @@ if is_raspberry:
     async def on_validation_failed():
             PopupUtils.show_status_popup()
             PopupUtils.update_status_popup("Failed to Identify!" , 1)
-            await asyncio.sleep(5)
+            await asyncio.sleep(2)
             PopupUtils.dismiss_status_popup()
  
     async def identify():  
@@ -115,10 +115,9 @@ if is_raspberry:
                         app =  App.get_running_app()  
                         employee = await db.get_employeeByIdentifier(identifier)
                         if employee is not None:  
-                            PopupUtils.dismiss_status_popup()
                             app.employee_to_enroll = employee
                             app.root.current = "mark" 
-                            await asyncio.sleep(5)
+                            await asyncio.sleep(2)
                             app.root.current = "main"
                         else: 
                             logInfo("No employee found for identifier in DB!") 
