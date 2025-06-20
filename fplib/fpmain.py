@@ -488,7 +488,8 @@ class Fingerprint():
             if ack:
                 sendstatus = self._send_data(data_bytes)
                 if sendstatus:
-                    HelperUtils.logInfo('|', '>'*10, '👍 MATCH FOUND 👍')
+                    #HelperUtils.logInfo('|', '>'*10, '👍 MATCH FOUND 👍')
+                    HelperUtils.logInfo('👍 MATCH FOUND 👍')
                     return True
                 return False
 
