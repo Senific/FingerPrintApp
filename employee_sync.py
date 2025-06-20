@@ -339,19 +339,26 @@ class EmployeeSync:
             if existingEmp is not None: 
                 await self.db.delete_employee(emp_id)
                 for id in HelperUtils.get_identifiers(emp["identifiers"]):
-                    fp.delete(id)
+                    if fp.delete(id) is not True: 
+                        raise RuntimeError("Failed Deleting FingerPrint from Sensor")
+                        
+                     
             self.delete_employee_image(emp_id)
         else:
             employee = Employee(emp_id, emp["Name"], emp["Code"], emp["Identifiers"], emp["Description"])
             await self.db.upsert_employee(employee)
             await self.download_employee_image(emp_id)
-            for identifier in HelperUtils.get_identifiers(employee.Identifiers): 
-                print(f'Deleting template for identifier: {identifier}' )
-                fp.delete(identifier)
-                templateData = await ApiUtils.get_fingerprint_template(identifier) 
+            for id in HelperUtils.get_identifiers(employee.Identifiers): 
+                print(f'Deleting template for identifier: {id}' )
+                if fp.delete(id) is not True: 
+                    raise RuntimeError("Failed Deleting FingerPrint from Sensor")
+                templateData = await ApiUtils.get_fingerprint_template(id) 
                 if templateData is not None and len(templateData) > 0:
                     print(f'Received template data {len(templateData)}' )
-                    fp.setTemplate(identifier, templateData)
+                    templateSetResult = fp.setTemplate(id, templateData)
+                    if templateSetResult == False:
+                        raise RuntimeError("Failed Setting template to sensor")
+                        
 
     async def Download(self, last_syncTime):
         url = f"{self.api_url}/api/Employees/GetNewChanges?lastSyncDate={quote(last_syncTime)}"
