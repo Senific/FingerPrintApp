@@ -115,7 +115,7 @@ if is_raspberry:
     async def identify():     
         try:  
             app =  App.get_running_app()     
-            Clock.schedule_once(lambda dt: resetScreen(app))
+            resetScreen(app)
 
             fp.open()
             fp.set_led(True) 
