@@ -105,12 +105,12 @@ if is_raspberry:
             PopupUtils.dismiss_status_popup()
  
     
-    async def identify():    
-        # Cancel previous scheduled "go back to main"
-        if hasattr(app, "mark_timeout_event") and app.mark_timeout_event:
-            app.mark_timeout_event.cancel()
-
+    async def identify():     
         try:    
+            # Cancel previous scheduled "go back to main"
+            if hasattr(app, "mark_timeout_event") and app.mark_timeout_event:
+                app.mark_timeout_event.cancel()
+
             fp.open()
             fp.set_led(True) 
             if fp.is_finger_pressed():
