@@ -24,6 +24,8 @@ import employee_sync
 
 class EnrollScreen(Screen): 
     fp : fplib = None
+    selectedIdentifier : int
+
     def on_pre_enter(self):
         emp = App.get_running_app().employee_to_enroll  
         if emp:
@@ -157,7 +159,8 @@ class EnrollScreen(Screen):
                 Clock.schedule_once(lambda dt: asyncio.ensure_future(self.deleteConfirmed(identifier)))
                   
             PopupUtils.show_confirm_popup(message= f"Delete Enrollment for identifier {identifier}?",  yesCallback = yesCallback )
-        else:  
+        else: 
+            self.selected_identifier = int( identifier )
             Clock.schedule_once(lambda dt: asyncio.ensure_future(self.perform_enroll(identifier)))
 
     async def deleteConfirmed(self,identifier): 
@@ -177,7 +180,7 @@ class EnrollScreen(Screen):
         await asyncio.sleep(2)
         PopupUtils.dismiss_status_popup()        
  
- 
+   
     async def touch_callback(self, touched):
         if touched == True:
             employee_sync.on_touch_callback = None
@@ -186,7 +189,7 @@ class EnrollScreen(Screen):
 
         PopupUtils.update_status_popup("Checking", 0)
         if fp.is_finger_pressed():
-            idx, data, downloadstatus = await asyncio.to_thread(lambda: asyncio.run( fp.enroll(self.enrollStatus_Callback, idx = int(id))))
+            idx, data, downloadstatus = await asyncio.to_thread(lambda: asyncio.run( fp.enroll(self.enrollStatus_Callback, idx = self.selected_identifier)))
             if idx >= 0: 
                 data,status =  fp.get_template(idx)
                 try:
