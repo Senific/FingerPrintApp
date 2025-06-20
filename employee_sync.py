@@ -13,7 +13,7 @@ from helper import HelperUtils
 # fingerprint module variables
 fp = fplib()
 init = fp.init()
-print("is initialized:", init)
+HelperUtils.logInfo(f"is initialized: {init}")
 
 global on_touch_callback 
 
@@ -142,7 +142,7 @@ class EmployeeDatabase:
                 await db.commit()
                 return True
         except Exception as e:
-            print(f"❌ Error Marking Attendance: {str(e)}")
+            HelperUtils.logError(f"❌ Error Marking Attendance: {str(e)}")
             return False
 
 
@@ -172,12 +172,12 @@ class EmployeeSync:
             "username": username,
             "password": password
         }
-        print("🔐 Authenticating (static)...")
+        HelperUtils.logInfo("🔐 Authenticating (static)...")
         async with httpx.AsyncClient() as client:
             response = await client.post(url, data=data, headers=headers)
             if response.status_code != 200:
                 raise Exception(f"Token request failed: {response.text}")
-            print("✅ Static Authenticated!")
+            HelperUtils.logInfo("✅ Static Authenticated!")
             return response.json().get("access_token")
 
     async def authenticate(self):
@@ -192,9 +192,9 @@ class EmployeeSync:
         try:
             with open(SECONDARY_SETTINGS_FILE, "w") as f:
                 f.write(str(interval_ms))
-            print(f"💾 Saved sync interval: {interval_ms} ms to SecondarySettings.txt")
+            HelperUtils.logInfo(f"💾 Saved sync interval: {interval_ms} ms to SecondarySettings.txt")
         except Exception as e:
-            print(f"❌ Failed to save sync interval: {e}")
+            HelperUtils.logError(f"❌ Failed to save sync interval: {e}")
 
     def load_secondary_settings(self) -> int:
         if os.path.exists(SECONDARY_SETTINGS_FILE):
@@ -212,7 +212,7 @@ class EmployeeSync:
             response.raise_for_status() 
             return response.json()
         except Exception as e:
-            print(f"❌ Failed to get system info: {e}")
+            HelperUtils.logError(f"❌ Failed to get system info: {e}")
             return None
 
 
@@ -224,7 +224,7 @@ class EmployeeSync:
                 response.raise_for_status()
                 return response.text.strip('"')
         except Exception as e:
-            print(f"❌ Failed to get server time: {e}")
+            HelperUtils.logError(f"❌ Failed to get server time: {e}")
             return None
 
     def get_last_sync_time(self):
@@ -250,7 +250,7 @@ class EmployeeSync:
                 with open(image_path, "wb") as f:
                     f.write(response.content)
         except Exception as e:
-            print(f"❌ Failed to download image for {emp_id}: {e}")
+            HelperUtils.logError(f"❌ Failed to download image for {emp_id}: {e}")
 
     def delete_employee_image(self, emp_id):
         path = os.path.join(IMAGES_DIR, f"{emp_id}.jpg")
@@ -282,19 +282,19 @@ class EmployeeSync:
             response = await self.client.post(url, headers=headers, json=payload)
             response.raise_for_status()
 
-            print(f"✅ Attendance uploaded for Employee {employee_id}")
+            HelperUtils.logInfo(f"✅ Attendance uploaded for Employee {employee_id}")
             return response.json()  # Do NOT await
         except httpx.HTTPStatusError as e:
-            print(f"❌ API Error ({e.response.status_code}): {e.response.text}")
+            HelperUtils.logError(f"❌ API Error ({e.response.status_code}): {e.response.text}")
             raise
         except Exception as e:
-            print(f"❌ Request failed: {e}")
+            HelperUtils.logError(f"❌ Request failed: {e}")
             raise
  
 
 
     async def Upload(self):
-        print("📤 Uploading attendances...")
+        HelperUtils.logInfo("📤 Uploading attendances...")
         async with aiosqlite.connect(self.db.db_path) as db:
             async with db.execute("""
                 SELECT ID, Employee_ID, Code, Name, Time, State
@@ -304,10 +304,10 @@ class EmployeeSync:
                 records = await cursor.fetchall()
 
             if not records:
-                print("✅ No attendances to upload.")
+                HelperUtils.logInfo("✅ No attendances to upload.")
                 return
             else:
-                print(f"{len(records)} records are uploading")
+                HelperUtils.logInfo(f"{len(records)} records are uploading")
 
             for row in records:
                 local_id, employee_id, code, name, time_str, state = row
@@ -318,7 +318,7 @@ class EmployeeSync:
                     await db.execute("UPDATE Attendances SET Deleted = 1 WHERE ID = ?", (local_id,))
                     await db.commit()
 
-                    print(f"✅ Uploaded and marked as deleted attendance ID {local_id}")
+                    HelperUtils.logInfo(f"✅ Uploaded and marked as deleted attendance ID {local_id}")
                 except Exception as e:
                     raise RuntimeError(f"❌ Error while uploading attendance ID {local_id}: {e}")
 
@@ -330,7 +330,7 @@ class EmployeeSync:
             """, (two_months_ago,))
             await db.commit()
 
-            print("🧹 Old deleted attendance records cleaned up (older than 2 months).")
+            HelperUtils.logInfo("🧹 Old deleted attendance records cleaned up (older than 2 months).")
 
     async def ProcessDownloaded(self, emp ):
         emp_id = emp["ID"]
@@ -338,7 +338,7 @@ class EmployeeSync:
         if emp["Deleted"]:
             if existingEmp is not None: 
                 await self.db.delete_employee(emp_id)
-                for id in HelperUtils.get_identifiers(emp["identifiers"]):
+                for id in HelperUtils.get_identifiers(emp["identifiers"]): 
                     if fp.delete(id) is not True: 
                         raise RuntimeError("Failed Deleting FingerPrint from Sensor")
                         
@@ -349,12 +349,12 @@ class EmployeeSync:
             await self.db.upsert_employee(employee)
             await self.download_employee_image(emp_id)
             for id in HelperUtils.get_identifiers(employee.Identifiers): 
-                print(f'Deleting template for identifier: {id}' )
+                HelperUtils.logInfo(f'Deleting template for identifier: {id}' )
                 if fp.delete(id) is not True: 
                     raise RuntimeError("Failed Deleting FingerPrint from Sensor")
                 templateData = await ApiUtils.get_fingerprint_template(id) 
                 if templateData is not None and len(templateData) > 0:
-                    print(f'Received template data {len(templateData)}' )
+                    HelperUtils.logInfo(f'Received template data {len(templateData)}' )
                     templateSetResult = fp.setTemplate(id, templateData)
                     if templateSetResult == False:
                         raise RuntimeError("Failed Setting template to sensor")
@@ -378,7 +378,7 @@ class EmployeeSync:
         except Exception as e: 
             raise RuntimeError(f"Sync Failed: {e}")
 
-        print(f"📦 Syncing {len(data)} employees...")
+        HelperUtils.logInfo(f"📦 Syncing {len(data)} employees...")
         
         for idx, emp in enumerate(data, 1):
             self.ProcessDownloaded(emp)
@@ -388,32 +388,32 @@ class EmployeeSync:
 
     async def sync(self):
         try:
-            print(f"🔄 Starting sync... System Code: {self.system_code}") 
+            HelperUtils.logInfo(f"🔄 Starting sync... System Code: {self.system_code}") 
             if not self.token:
                 await self.authenticate()
     
             system_info = await self.get_system_info() 
             if not system_info:
-                print("❌ Unable to fetch system info. Aborting sync.")
+                HelperUtils.logWarning("❌ Unable to fetch system info. Aborting sync.")
                 return
 
             EmployeeSync.sync_interval_ms = system_info.get("FingerMachineSyncInterval", 1000)
-            print(f"Sync Interval: {EmployeeSync.sync_interval_ms}ms")
+            HelperUtils.logInfo(f"Sync Interval: {EmployeeSync.sync_interval_ms}ms")
             self.save_secondary_settings(EmployeeSync.sync_interval_ms)
 
             last_sync = self.get_last_sync_time()
-            print(f"🕒 Last sync: {last_sync}")
+            HelperUtils.logInfo(f"🕒 Last sync: {last_sync}")
 
             new_sync_time = await self.get_server_time()
             if not new_sync_time:
-                print("❌ Server time unavailable")
+                HelperUtils.logWarning("❌ Server time unavailable")
                 return
 
             await self.Download(last_sync)
             await self.Upload()
 
             self.save_last_sync_time(new_sync_time)
-            print(f"✅ Sync completed. Last sync updated to: {new_sync_time}")
+            HelperUtils.logInfo(f"✅ Sync completed. Last sync updated to: {new_sync_time}")
         except Exception as e:
-            print(f"Sync Error: {e}")
+            HelperUtils.logError(f"Sync Error: {e}")
             await asyncio.sleep(5)

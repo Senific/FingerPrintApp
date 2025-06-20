@@ -1,7 +1,5 @@
  
-from fplib.fpmain import Fingerprint 
-import os
-
+import logging 
 class HelperUtils:
     @staticmethod
     def get_identifiers(identifiersStr):
@@ -22,7 +20,7 @@ class HelperUtils:
 
     @staticmethod
     #fp type
-    def check_enrollment_status(fp: Fingerprint, identifiersStr):
+    def check_enrollment_status(fp, identifiersStr):
         count = 0 
         identifiers = HelperUtils.get_identifiers(identifiersStr)
         for x in  identifiers:
@@ -32,4 +30,19 @@ class HelperUtils:
         return count > 0, status_message
     
 
- 
+    
+    @staticmethod
+    def logInfo(msg):
+        print(msg)
+        logging.info(msg)
+
+    @staticmethod 
+    def logWarning(msg):
+        print(f"Warning: {msg}")
+        logging.warning(msg)
+
+    @staticmethod 
+    def logError(msg):
+        print(f"Error: {msg}")
+        logging.error(msg)
+

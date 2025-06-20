@@ -109,6 +109,7 @@ class EnrollScreen(Screen):
             await sync.ProcessDownloaded(emp)
             PopupUtils.update_status_popup("Completed", 2)
         except Exception as e:
+            HelperUtils.logError(f"Sync Error: {e} ")
             PopupUtils.update_status_popup("Sync Failed!", 1)
         await asyncio.sleep(1)
         PopupUtils.dismiss_status_popup()
@@ -125,7 +126,7 @@ class EnrollScreen(Screen):
         # Smart columns: square root logic
         columns = max(1, math.ceil(math.sqrt(count)))
 
-        print(f"Identifiers count = {count}, smart columns = {columns}")
+        HelperUtils.logInfo(f"Identifiers count = {count}, smart columns = {columns}")
 
         # Build GridLayout
         grid = GridLayout(cols=columns, spacing=10, padding=10, size_hint_y=None)

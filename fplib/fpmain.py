@@ -1,13 +1,12 @@
 import threading
 import asyncio
-import codecs
-import logging
+import codecs 
 import serial
 import time
 
-logging.basicConfig(format="[%(name)s][%(asctime)s] %(message)s")
-logger = logging.getLogger("Fingerprint")
-logger.setLevel(logging.INFO)
+from helper import HelperUtils
+
+ 
 
 class Fingerprint():
 
@@ -126,20 +125,18 @@ class Fingerprint():
                         raise Exception()
                     if self.open():
                         self.change_baud(self.baud)
-                        logger.info("The baud rate is changed to %s." % self.baud)
+                        HelperUtils.logInfo("The baud rate is changed to %s." % self.baud)
                     self.ser.close()
                     self.ser = serial.Serial(self.port, baudrate=self.baud, timeout=self.timeout)
                     if not self.open_serial():
                         raise Exception()
-                logger.info("Serial connected.")
+                HelperUtils.logInfo("Serial connected.")
                 self.open()
                 self._flush()
                 self.close()
                 return True
-            except Exception as e:
-                print("Failed to connect to the serial.")
-                logger.error("Failed to connect to the serial.")
-                logger.error(e)
+            except Exception as e: 
+                HelperUtils.logError(f"Failed to connect to the serial: {e}") 
             return False
 
     def open_serial(self):
@@ -198,11 +195,11 @@ class Fingerprint():
     def _send_data(self, data, parameter=False): 
         with self.lock: 
             if self.ser and self.ser.writable():
-                print("length of written data : ", self.ser.write(data))
+                HelperUtils.logInfo("length of written data : ", self.ser.write(data))
                 time.sleep(0.1)
-                print("SENDing DATA ...", end=' ')
+                HelperUtils.logInfo("SENDing DATA ...", end=' ')
                 ack, param, _, _ = self._read_packet()
-                print("✅")
+                HelperUtils.logInfo("✅")
                 if parameter:
                     if ack:
                         return param
@@ -284,7 +281,7 @@ class Fingerprint():
                 if firstbyte and secondbyte:
                     # Data exists.
                     if firstbyte == Fingerprint.PACKET_DATA_0 and secondbyte == Fingerprint.PACKET_DATA_1:
-                        print(">> Data exists...")
+                        HelperUtils.logInfo(">> Data exists...")
                         # print("FB-SB: ", firstbyte, secondbyte)
                         data = bytearray()
                         data.append(firstbyte)
@@ -297,7 +294,7 @@ class Fingerprint():
                     read_buffer += p
                     # print(p, type(p))
                     if len(p) == 0:
-                        print(">> Transmission Completed . . .")
+                        HelperUtils.logInfo(">> Transmission Completed . . .")
                         break
 
             return ack, param, res, read_buffer
@@ -332,7 +329,7 @@ class Fingerprint():
 
     def is_finger_pressed(self):
         with self.lock:
-            print("Checking if finger is pressed or not.")
+            HelperUtils.logInfo("Checking if finger is pressed or not.")
             self.set_led(True)
             time.sleep(1)
             if self._send_packet("IsPressFinger"):
@@ -491,7 +488,7 @@ class Fingerprint():
             if ack:
                 sendstatus = self._send_data(data_bytes)
                 if sendstatus:
-                    print('|', '>'*10, '👍 MATCH FOUND 👍')
+                    HelperUtils.logInfo('|', '>'*10, '👍 MATCH FOUND 👍')
                     return True
                 return False
 
@@ -506,7 +503,7 @@ class Fingerprint():
                 ack, _, _, _ = self._read_packet()
                 if ack:
                     if self._send_data(data_bytes):
-                        print(f'👍 setTemplate @ ID: {idx}')
+                        HelperUtils.logInfo(f'👍 setTemplate @ ID: {idx}')
                         return True
                     return False
                 return False
@@ -524,11 +521,11 @@ class Fingerprint():
     def delete(self, idx):
         with self.lock:
             if not isinstance(idx, int) or idx < 0:
-                print("Invalid ID")
+                HelperUtils.logInfo("Invalid ID")
                 return False 
             
-            # Delete all fingerprints
-            res = self._send_packet("DeleteID", idx)
+            # Delete all fingerprints 
+            res = self._send_packet("DeleteID", idx) 
             if res:
                 ack, _, _, _ = self._read_packet()
                 return ack
@@ -566,7 +563,7 @@ class Fingerprint():
         with self.lock:
             #Check if a fingerprint is enrolled at the given ID. 
             if not isinstance(idx, int) or idx < 0:
-                print("Invalid ID for check_enrolled.")
+                HelperUtils.logInfo("Invalid ID for check_enrolled.")
                 return False
 
             if self._send_packet("CheckEnrolled", param=idx):
@@ -574,10 +571,10 @@ class Fingerprint():
                 if ack: 
                     return True 
                 else:
-                    print(f"Res:{res} Param:{param} {self.get_nack_description(param)}")
+                    HelperUtils.logInfo(f"Res:{res} Param:{param} {self.get_nack_description(param)}")
                     return False
             else:
-                print("Failed to send CheckEnrolled command.")
+                HelperUtils.logInfo("Failed to send CheckEnrolled command.")
                 return False
 
     def get_template(self, idx):
@@ -587,20 +584,20 @@ class Fingerprint():
         #    success (bool): Whether the operation was successful. 
         with self.lock:
             if not isinstance(idx, int) or idx < 0:
-                print("Invalid ID.")
+                HelperUtils.logInfo("Invalid ID.")
                 return None, False
 
             if self._send_packet("GetTemplate", idx):
                 ack, param, res, data = self._read_packet()
                 if not ack:
-                    print(f"Res:{res} Param:{param} {self.get_nack_description(param)}")
+                    HelperUtils.logInfo(f"Res:{res} Param:{param} {self.get_nack_description(param)}")
                     return None, False
 
                 if data and len(data) > 0: 
                     return data, True
                 else:
-                    print("Template data is empty or missing.")
+                    HelperUtils.logInfo("Template data is empty or missing.")
                     return None, False 
             else:
-                print("Failed to send GetTemplate command.")
+                HelperUtils.logInfo("Failed to send GetTemplate command.")
                 return None, False

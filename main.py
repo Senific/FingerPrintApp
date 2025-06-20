@@ -1,6 +1,8 @@
 from datetime import datetime
 import os
-import logging 
+import logging
+
+from helper import HelperUtils 
 
 # Suppress overly verbose httpx/httpcore debug logs
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -51,7 +53,7 @@ def run_async_loop(dt):
         async_loop.call_soon(async_loop.stop)
         async_loop.run_forever()
     except Exception as e:
-        print(f"[ERROR] Async loop crashed: {e}")
+        HelperUtils.logError(f"[ERROR] Async loop crashed: {e}")
 
 # Schedule the asyncio loop to tick with Kivy's clock
 Clock.schedule_interval(run_async_loop, 0)
@@ -78,22 +80,6 @@ Window.left = (Window.system_size[0] - 480) // 2
 Window.top = (Window.system_size[1] - 320) // 2
 
 
-@staticmethod
-def logInfo(msg):
-    print(msg)
-    logging.info(msg)
-
-@staticmethod 
-def logWarning(msg):
-    print(f"Warning: {msg}")
-    logging.warning(msg)
-
-@staticmethod 
-def logError(msg):
-    print(f"Error: {msg}")
-    logging.error(msg)
-
-
 if is_raspberry:
     import pigpio 
     TOUCH_PIN = 5  # GPIO5 (Physical pin 29)
@@ -113,7 +99,7 @@ if is_raspberry:
             PopupUtils.dismiss_status_popup()
             app.root.current = "main" 
         except Exception as e:
-            logError(f"Screen Reset Error: {e}")
+            HelperUtils.logError(f"Screen Reset Error: {e}")
 
     async def identify():     
         try:  
@@ -126,7 +112,7 @@ if is_raspberry:
                 identifier = fp.identify()
                 if identifier is not None and identifier >= 0:  
                     try: 
-                        logInfo(f"Identified: {identifier}") 
+                        HelperUtils.logInfo(f"Identified: {identifier}") 
                         employee = await db.get_employeeByIdentifier(identifier)  
                         if employee is not None:  
                             marked_time =  datetime.now()
@@ -141,24 +127,24 @@ if is_raspberry:
                             else:
                                 raise RuntimeError("Failed At Marking to database")
                         else: 
-                            logInfo("No employee found for identifier in DB!") 
+                            HelperUtils.logInfo("No employee found for identifier in DB!") 
                             Clock.schedule_once(lambda dt: asyncio.ensure_future(on_validation_failed()))
                     except Exception as e:
-                        logError(f"Identify Exception: {e}") 
+                        HelperUtils.logError(f"Identify Exception: {e}") 
                         Clock.schedule_once(lambda dt: asyncio.ensure_future(on_validation_failed()))
                 else: 
-                    logInfo("No employee found for finger!") 
+                    HelperUtils.logInfo("No employee found for finger!") 
                     Clock.schedule_once(lambda dt: asyncio.ensure_future(on_validation_failed()))
                 
         except Exception as e: 
-                logError(f"Identify.2 Exception : {e}") 
+                HelperUtils.logError(f"Identify.2 Exception : {e}") 
                 Clock.schedule_once(lambda dt: asyncio.ensure_future(on_validation_failed()))
         finally:
             try:
                 fp.set_led(False)
                 fp.close()
             except Exception as e:
-                logError(f"Identify.3 Exception : {e}") 
+                HelperUtils.logError(f"Identify.3 Exception : {e}") 
                 Clock.schedule_once(lambda dt: asyncio.ensure_future(on_validation_failed()))
 
 
@@ -167,26 +153,26 @@ if is_raspberry:
         if app.root.current == "main" or App.get_running_app().root.current == "mark":
             if level == 0: 
                 Clock.schedule_once(lambda dt: asyncio.ensure_future(identify()))
-                logInfo("👆 Finger touched")
+                HelperUtils.logInfo("👆 Finger touched")
             elif level == 1: 
-                logInfo("✋ Finger released")
+                HelperUtils.logInfo("✋ Finger released")
         else: 
             try:
                 from employee_sync import on_touch_callback
                 if  on_touch_callback is not None:
-                    logInfo("Touch Callback is Active") 
+                    HelperUtils.logInfo("Touch Callback is Active") 
                     touchResult = level == 0
                     Clock.schedule_once(lambda dt: asyncio.ensure_future(on_touch_callback(touchResult)))
                 else:
-                    logInfo("Touch Callback is None") 
+                    HelperUtils.logInfo("Touch Callback is None") 
             except Exception as ex:
-                logError(f"Touch Callback is Error: {ex}") 
+                HelperUtils.logError(f"Touch Callback is Error: {ex}") 
   
 
     # Connect to pigpio daemon
     pi = pigpio.pi()
     if not pi.connected:
-        logWarning("❌ Failed to connect to pigpiod. Is it running?")
+        HelperUtils.logWarning("❌ Failed to connect to pigpiod. Is it running?")
         exit(1)
 
     # Set the pin as input
@@ -236,7 +222,7 @@ class BackgroundSyncThread(threading.Thread):
         try:
             config = get_api_config()
         except FileNotFoundError:
-            logging.warning("Settings not found. Skipping sync.")
+            HelperUtils.logWarning("Settings not found. Skipping sync.")
             return
 
         sync = EmployeeSync(db=db)
@@ -246,9 +232,9 @@ class BackgroundSyncThread(threading.Thread):
                 try:
                     await sync.sync()
                 except Exception as e:
-                    logging.error(f"Sync error: {e}")
+                    HelperUtils.logError(f"Sync error: {e}")
                 await asyncio.sleep(EmployeeSync.sync_interval_ms / 1000)
-                print(f"Warning Threed Slept for {EmployeeSync.sync_interval_ms} ms"  )
+                HelperUtils.logInfo(f"Warning Threed Slept for {EmployeeSync.sync_interval_ms} ms"  )
         finally:
             await sync.close()
 
@@ -260,9 +246,9 @@ if __name__ == "__main__":
         sync_thread = BackgroundSyncThread()
         sync_thread.start()  
     except Exception as e:
-        logging.error(f"Background sync failed to start: {e}")
+        HelperUtils.logError(f"Background sync failed to start: {e}")
 
     try:
         FingerprintApp().run()
     except Exception as e:
-        logging.exception("App crashed on startup:")
+        HelperUtils.logError("App crashed on startup:")
