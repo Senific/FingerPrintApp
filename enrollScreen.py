@@ -75,16 +75,13 @@ class EnrollScreen(Screen):
         content_layout.add_widget(info_layout)
 
         footer_layout = BoxLayout(orientation='horizontal', spacing=10, size_hint=(1, 0.15))
-        self.enroll_button = Button(text="Start Enrollment")
-        self.mark_button = Button(text="Go To Mark")
+        self.enroll_button = Button(text="Start Enrollment") 
         self.back_button = Button(text="Back", size_hint=(0.3, 1))
 
-        self.enroll_button.bind(on_release=self.start_enrollment)
-        self.mark_button.bind(on_release=self.mark)
+        self.enroll_button.bind(on_release=self.start_enrollment) 
         self.back_button.bind(on_release=self.go_back)
 
-        footer_layout.add_widget(self.enroll_button)
-        footer_layout.add_widget(self.mark_button)
+        footer_layout.add_widget(self.enroll_button) 
         footer_layout.add_widget(self.back_button)
 
         root_layout.add_widget(content_layout)
@@ -243,11 +240,7 @@ class EnrollScreen(Screen):
  
  
  
-    def mark(self, instance):
-        app = App.get_running_app()
-        app.employee_to_enroll = App.get_running_app().employee_to_enroll
-        app.markAttendancePrevious_screen = "enroll"
-        self.manager.current = "mark"
+     
 
     def go_back(self, instance):
         app = App.get_running_app()

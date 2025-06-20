@@ -1,3 +1,4 @@
+from datetime import datetime
 import os
 import logging 
 
@@ -115,10 +116,16 @@ if is_raspberry:
                         app =  App.get_running_app()  
                         employee = await db.get_employeeByIdentifier(identifier)
                         if employee is not None:  
-                            app.employee_to_enroll = employee
-                            app.root.current = "mark" 
-                            await asyncio.sleep(3)
-                            app.root.current = "main"
+                            marked_time =  datetime.now()
+                            app.marked_employee = employee
+                            app.marked_time = marked_time
+                            result = db.insert_attendance(employee, marked_time)
+                            if result: 
+                                app.root.current = "mark" 
+                                await asyncio.sleep(5)
+                                app.root.current = "main"
+                            else:
+                                raise Exception("Failed At Marking to database")
                         else: 
                             logInfo("No employee found for identifier in DB!") 
                             Clock.schedule_once(lambda dt: asyncio.ensure_future(on_validation_failed()))

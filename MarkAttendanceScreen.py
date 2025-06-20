@@ -1,30 +1,17 @@
-import os
-import sqlite3
-from datetime import datetime
+import os 
 from kivy.uix.screenmanager import Screen
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.gridlayout import GridLayout
-from kivy.uix.anchorlayout import AnchorLayout
-from kivy.uix.button import Button
+from kivy.uix.boxlayout import BoxLayout 
 from kivy.uix.label import Label
 from kivy.uix.image import Image
 from kivy.uix.floatlayout import FloatLayout
 from kivy.app import App
-from employee_sync import DB_FILE, IMAGES_DIR
-from kivy.clock import Clock
+from employee_sync import  IMAGES_DIR
 
 class MarkAttendanceScreen(Screen):
     def on_pre_enter(self):
-        app = App.get_running_app()
-        self.emp = app.employee_to_enroll
-        self.sensor_triggered = getattr(app, "sensor_triggered", False)
-        if self.emp:
-            image_path = os.path.join(IMAGES_DIR, f"{self.emp['ID']}.jpg")
-            if not os.path.exists(image_path):
-                image_path = os.path.join(IMAGES_DIR, "no_photo.jpg")
-            self.markedTime = datetime.now()
-            self.set_details(image_path, self.emp['Name'], self.emp['Code'],self.markedTime)
-          
+        app = App.get_running_app()   
+        self.set_details(app.marked_employee,app.marked_time)
+        
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -73,14 +60,14 @@ class MarkAttendanceScreen(Screen):
         button_bar = BoxLayout(orientation='horizontal', spacing=10, size_hint=(1, None), height=40)
  
 
-        self.mark_btn = Button(text="Mark", font_size=14)
-        self.mark_btn.bind(on_release=self.mark_attendance) 
+        # self.mark_btn = Button(text="Mark", font_size=14)
+        # self.mark_btn.bind(on_release=self.mark_attendance) 
 
-        self.back_btn = Button(text="Back", font_size=14, size_hint=(None, 1), width=80)
-        self.back_btn.bind(on_release=self.go_back)
+        # self.back_btn = Button(text="Back", font_size=14, size_hint=(None, 1), width=80)
+        # self.back_btn.bind(on_release=self.go_back)
  
-        button_bar.add_widget(self.mark_btn)
-        button_bar.add_widget(self.back_btn)
+        # button_bar.add_widget(self.mark_btn)
+        # button_bar.add_widget(self.back_btn)
 
         # Add sections
         content.add_widget(info_section)
@@ -90,35 +77,19 @@ class MarkAttendanceScreen(Screen):
         layout.add_widget(content)
         self.add_widget(layout)
 
-    def set_details(self, image_path, name, code,time):
+    def set_details(self, employee,time):
+        image_path = os.path.join(IMAGES_DIR, f"{employee['ID']}.jpg")
+        if not os.path.exists(image_path):
+            image_path = os.path.join(IMAGES_DIR, "no_photo.jpg")
+        
         self.image.source = image_path
-        self.name_label.text = f"{name}"
-        self.code_label.text = f"{code}"
-        self.time_label.text =  f"{ self.markedTime.strftime('%Y-%m-%d %H:%M:%S')}"
+        self.name_label.text = f"{employee['name']}"
+        self.code_label.text = f"{employee['code']}"
+        self.time_label.text =  f"{ time.strftime('%Y-%m-%d %H:%M:%S')}"
         #self.mark_btn.disabled = self.sensor_triggered
+ 
 
-    def mark_attendance(self, instance):
-        try:
-            conn = sqlite3.connect(DB_FILE)
-            cursor = conn.cursor()
-            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            cursor.execute("""
-                INSERT INTO Attendances (Employee_ID, Code, Name, Time, State, Deleted)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (self.emp['ID'], self.emp['Code'], self.emp['Name'],  now, 'Unknown', 0)) 
-            conn.commit()
-            conn.close()
-            print(f'✅ Attendance Marking completed for Employee { self.code_label.text }')
-
-            if self.sensor_triggered:  
-                # 🔁 Auto return after 3 seconds
-                Clock.schedule_once(lambda dt: self.go_back(None), 3)
-            else:
-                self.go_back(instance)
-        except Exception as e:
-            print( f"❌ Error Marking Attendance: {str(e)}") 
-
-    def go_back(self, instance):
+    def go_back(self):
         app = App.get_running_app()
         if self.manager:
             target = getattr(app, 'markAttendancePrevious_screen', 'main')

@@ -131,6 +131,20 @@ class EmployeeDatabase:
             await cursor.close()
             return row
 
+    async def insert_attendance(self, employee, time):
+        try:
+            async with aiosqlite.connect(self.db_path) as db:
+                now = time.strftime("%Y-%m-%d %H:%M:%S")
+                await db.execute("""
+                    INSERT INTO Attendances (Employee_ID, Code, Name, Time, State, Deleted)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (employee['ID'], employee['Code'], employee['Name'], now, 'Unknown', 0))
+                await db.commit()
+                return True
+        except Exception as e:
+            print(f"❌ Error Marking Attendance: {str(e)}")
+            return False
+
 
 class EmployeeSync:
     def __init__(self, db: EmployeeDatabase, sync_file=None):
