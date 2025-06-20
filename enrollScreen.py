@@ -157,8 +157,7 @@ class EnrollScreen(Screen):
                 Clock.schedule_once(lambda dt: asyncio.ensure_future(self.deleteConfirmed(identifier)))
                   
             PopupUtils.show_confirm_popup(message= f"Delete Enrollment for identifier {identifier}?",  yesCallback = yesCallback )
-        else: 
-            PopupUtils.show_status_popup()
+        else:  
             Clock.schedule_once(lambda dt: asyncio.ensure_future(self.perform_enroll(identifier)))
 
     async def deleteConfirmed(self,identifier): 
@@ -178,50 +177,50 @@ class EnrollScreen(Screen):
         await asyncio.sleep(2)
         PopupUtils.dismiss_status_popup()        
  
-    enrolling_in_progress = False
  
     async def touch_callback(self, touched):
-        if self.enrolling_in_progress == True:
+        if touched == True:
+            employee_sync.on_touch_callback = None
+        else:
             return
-        self.enrolling_in_progress = True
-
+        
         fp.set_led(True)
         await asyncio.sleep(1)
-        fp.set_led(False)
+        fp.set_led(False) 
 
-        if touched == True:
-            PopupUtils.update_status_popup("Checking", 0)
-            if fp.is_finger_pressed():
-                idx, data, downloadstatus = await asyncio.to_thread(lambda: asyncio.run( fp.enroll(self.enrollStatus_Callback, idx = int(id))))
-                if idx >= 0: 
-                    data,status =  fp.get_template(idx)
-                    try:
-                        PopupUtils.update_status_popup("Uploading...", 4)
-                        asyncio.sleep(1)
-                        await ApiUtils.upload_fingerprint_template(idx, data)
-                        PopupUtils.update_status_popup("Successfully Enrolled!", 2)
-                    except Exception as e:
-                        logging.error(e)
-                        PopupUtils.update_status_popup("Failed while uploading!", 1)
-                        fp.delete(idx) 
-                        
-                        
-                    self.enrolling_in_progress = False
-                    self.enroll_popup.dismiss()
-                    self.on_pre_enter()
-                else:  
-                    PopupUtils.update_status_popup("Enrolling Failed!", 1)
-                await asyncio.sleep(2)
-            else: 
+        PopupUtils.update_status_popup("Checking", 0)
+        if fp.is_finger_pressed():
+            idx, data, downloadstatus = await asyncio.to_thread(lambda: asyncio.run( fp.enroll(self.enrollStatus_Callback, idx = int(id))))
+            if idx >= 0: 
+                data,status =  fp.get_template(idx)
+                try:
+                    PopupUtils.update_status_popup("Uploading...", 4)
+                    asyncio.sleep(1)
+                    await ApiUtils.upload_fingerprint_template(idx, data)
+                    PopupUtils.update_status_popup("Successfully Enrolled!", 2)
+                except Exception as e:
+                    logging.error(e)
+                    PopupUtils.update_status_popup("Failed while uploading!", 1)
+                    fp.delete(idx) 
+                    
+                    
+                self.enrolling_in_progress = False
+                self.enroll_popup.dismiss()
+                self.on_pre_enter()
+            else:  
                 PopupUtils.update_status_popup("Enrolling Failed!", 1)
-                await asyncio.sleep(2) 
-            
-            employee_sync.on_touch_callback = None 
-            self.enrolling_in_progress = False
-            PopupUtils.dismiss_status_popup()
+            await asyncio.sleep(2)
+        else: 
+            PopupUtils.update_status_popup("Enrolling Failed!", 1)
+            await asyncio.sleep(2) 
+        
+        employee_sync.on_touch_callback = None 
+        self.enrolling_in_progress = False
+        PopupUtils.dismiss_status_popup()
     
 
     async def perform_enroll(self, id): 
+        PopupUtils.show_status_popup()
         PopupUtils.update_status_popup("Please place finger...", 3)
         employee_sync.on_touch_callback = self.touch_callback 
         print("Touch callback Added")
