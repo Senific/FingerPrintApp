@@ -187,7 +187,7 @@ class EnrollScreen(Screen):
         fp.set_led(True)
         await asyncio.sleep(1)
         fp.set_led(False) 
-
+        return
         PopupUtils.update_status_popup("Checking", 0)
         if fp.is_finger_pressed():
             idx, data, downloadstatus = await asyncio.to_thread(lambda: asyncio.run( fp.enroll(self.enrollStatus_Callback, idx = int(id))))
