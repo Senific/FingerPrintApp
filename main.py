@@ -115,7 +115,7 @@ if is_raspberry:
     async def identify():     
         try:  
             app =  App.get_running_app()     
-            resetScreen(app)
+            #resetScreen(app)
 
             fp.open()
             fp.set_led(True) 
@@ -159,9 +159,10 @@ if is_raspberry:
                 Clock.schedule_once(lambda dt: asyncio.ensure_future(on_validation_failed()))
 
 
-    def on_touch(gpio, level, tick):
-        print
-        if App.get_running_app().root.current == "main" or App.get_running_app().root.current == "mark":
+    def on_touch(gpio, level, tick): 
+        app = App.get_running_app()
+        resetScreen(app)
+        if app.root.current == "main" or App.get_running_app().root.current == "mark":
             if level == 0: 
                 Clock.schedule_once(lambda dt: asyncio.ensure_future(identify()))
                 logInfo("👆 Finger touched")
