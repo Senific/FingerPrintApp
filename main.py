@@ -123,7 +123,7 @@ if is_raspberry:
                             result = await db.insert_attendance(employee, marked_time)
                             if result == True: 
                                 app.root.current = "mark" 
-                                await asyncio.sleep(2)
+                                await asyncio.sleep(5)
                                 app.root.current = "main"
                             else:
                                 raise RuntimeError("Failed At Marking to database")
