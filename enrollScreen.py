@@ -98,7 +98,7 @@ class EnrollScreen(Screen):
 
     async def sync(self):
         db = EmployeeDatabase()
-        db.initialize()
+        await db.initialize()
         sync = employee_sync.EmployeeSync(db=db)
         emp = App.get_running_app().employee_to_enroll
         emp['Deleted'] = 0
