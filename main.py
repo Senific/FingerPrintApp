@@ -120,12 +120,12 @@ if is_raspberry:
                             app.marked_employee = employee
                             app.marked_time = marked_time
                             result = db.insert_attendance(employee, marked_time)
-                            if result: 
+                            if result == True: 
                                 app.root.current = "mark" 
                                 await asyncio.sleep(5)
                                 app.root.current = "main"
                             else:
-                                raise Exception("Failed At Marking to database")
+                                raise RuntimeError("Failed At Marking to database")
                         else: 
                             logInfo("No employee found for identifier in DB!") 
                             Clock.schedule_once(lambda dt: asyncio.ensure_future(on_validation_failed()))

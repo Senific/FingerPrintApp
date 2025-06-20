@@ -305,6 +305,8 @@ class EmployeeSync:
             if not records:
                 print("✅ No attendances to upload.")
                 return
+            else
+                print(f"{len(records)} records are uploading")
 
             for row in records:
                 local_id, employee_id, code, name, time_str, state = row
