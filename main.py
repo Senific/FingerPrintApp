@@ -115,6 +115,7 @@ if is_raspberry:
                         app =  App.get_running_app()  
                         employee = await db.get_employeeByIdentifier(identifier)
                         if employee is not None: 
+                            Clock.schedule_once(lambda dt: asyncio.ensure_future(PopupUtils.dismiss_status_popup()))
                             app.employee_to_enroll = employee
                             app.root.current = "mark" 
                             await asyncio.sleep(5)
@@ -128,6 +129,7 @@ if is_raspberry:
                 else: 
                     logInfo("No employee found for finger!") 
                     Clock.schedule_once(lambda dt: asyncio.ensure_future(on_validation_failed()))
+                
         except Exception as e: 
                 logError(f"Identify.2 Exception : {e}") 
                 Clock.schedule_once(lambda dt: asyncio.ensure_future(on_validation_failed()))
