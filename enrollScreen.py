@@ -186,39 +186,44 @@ class EnrollScreen(Screen):
             employee_sync.on_touch_callback = None
         else:
             return 
+        try:
+            PopupUtils.update_status_popup("Checking", 0)
+            if fp.is_finger_pressed():
+                idx, data, downloadstatus = await asyncio.to_thread(lambda: asyncio.run( fp.enroll(self.enrollStatus_Callback, idx = self.selected_identifier)))
+                if idx >= 0: 
+                    data,status =  fp.get_template(idx)
+                    try:
+                        if status == False or len(data) == 0:
+                            raise RuntimeError("Fetched template data is invalid")
 
-        PopupUtils.update_status_popup("Checking", 0)
-        if fp.is_finger_pressed():
-            idx, data, downloadstatus = await asyncio.to_thread(lambda: asyncio.run( fp.enroll(self.enrollStatus_Callback, idx = self.selected_identifier)))
-            if idx >= 0: 
-                data,status =  fp.get_template(idx)
-                try:
-                    if status == False or len(data) == 0:
-                        raise RuntimeError("Fetched template data is invalid")
-
-                    PopupUtils.update_status_popup("Uploading...", 4)
-                    asyncio.sleep(1)
-                    await ApiUtils.upload_fingerprint_template(idx, data)
-                    PopupUtils.update_status_popup("Successfully Enrolled!", 2)
-                except Exception as e:
-                    logging.error(e)
-                    PopupUtils.update_status_popup("Failed while uploading!", 1)
-                    fp.delete(idx) 
-                    
-                    
-                self.enrolling_in_progress = False
-                self.enroll_popup.dismiss()
-                self.on_pre_enter()
-            else:  
+                        PopupUtils.update_status_popup("Uploading...", 4)
+                        asyncio.sleep(1)
+                        await ApiUtils.upload_fingerprint_template(idx, data)
+                        PopupUtils.update_status_popup("Successfully Enrolled!", 2)
+                    except Exception as e:
+                        logging.error(e)
+                        PopupUtils.update_status_popup("Failed while uploading!", 1)
+                        fp.delete(idx) 
+                        
+                        
+                    self.enrolling_in_progress = False
+                    self.enroll_popup.dismiss()
+                    self.on_pre_enter()
+                else:  
+                    PopupUtils.update_status_popup("Enrolling Failed!", 1)
+                await asyncio.sleep(2)
+            else: 
                 PopupUtils.update_status_popup("Enrolling Failed!", 1)
+                await asyncio.sleep(2) 
+            
+            employee_sync.on_touch_callback = None 
+            self.enrolling_in_progress = False
+        except Exception as e:
+            logging.error(e)
+            PopupUtils.update_status_popup("Unexpected Error!", 1)
             await asyncio.sleep(2)
-        else: 
-            PopupUtils.update_status_popup("Enrolling Failed!", 1)
-            await asyncio.sleep(2) 
-        
-        employee_sync.on_touch_callback = None 
-        self.enrolling_in_progress = False
-        PopupUtils.dismiss_status_popup()
+        finally:
+            PopupUtils.dismiss_status_popup()
     
 
     async def perform_enroll(self, id): 
