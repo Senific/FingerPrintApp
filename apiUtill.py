@@ -113,13 +113,9 @@ class ApiUtils:
 
             logging.info(f"📥 Fingerprint template retrieved for Identifier {identifier}")
             return response.content  # binary template data
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == 404:
-                logging.warning(f"⚠️ Template not found for Identifier {identifier}")
-                return b""  # return empty byte array
-            else:
-                logging.error(f"❌ API Error ({e.response.status_code}): {e.response.text}")
-                raise
+        except httpx.HTTPStatusError as e: 
+            logging.error(f"❌ API Error ({e.response.status_code}): {e.response.text}")
+            raise
         except Exception as e:
             logging.error(f"❌ Request failed: {e}")
             raise
