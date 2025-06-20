@@ -106,7 +106,8 @@ if is_raspberry:
  
     
     async def identify():     
-        try:    
+        try:  
+            app =  App.get_running_app()   
             # Cancel previous scheduled "go back to main"
             if hasattr(app, "mark_timeout_event") and app.mark_timeout_event:
                 app.mark_timeout_event.cancel()
@@ -117,8 +118,7 @@ if is_raspberry:
                 identifier = fp.identify()
                 if identifier is not None and identifier >= 0:  
                     try: 
-                        logInfo(f"Identified: {identifier}")
-                        app =  App.get_running_app()  
+                        logInfo(f"Identified: {identifier}") 
                         employee = await db.get_employeeByIdentifier(identifier)  
                         if employee is not None:  
                             marked_time =  datetime.now()
