@@ -1,3 +1,4 @@
+import threading
 import asyncio
 import codecs
 import logging
@@ -55,6 +56,8 @@ class Fingerprint():
     NACK = 0x31
  
     def __init__(self):
+        self.lock = threading.Lock()
+
         #self.port = 'COM6'
         self.port = '/dev/serial0'
         self.baud = 115200
@@ -110,122 +113,131 @@ class Fingerprint():
 
 
     def init(self):
-        try:
-            self.ser = serial.Serial(self.port, baudrate=self.baud, timeout=self.timeout)
-            time.sleep(1)
-            connected = self.open_serial()
-            if not connected:
-                self.ser.close()
-                baud_prev = 9600 if self.baud == 115200 else 115200
-                self.ser = serial.Serial(self.port, baudrate=baud_prev, timeout=self.timeout)
-                if not self.open_serial():
-                    raise Exception()
-                if self.open():
-                    self.change_baud(self.baud)
-                    logger.info("The baud rate is changed to %s." % self.baud)
-                self.ser.close()
+        with self.lock:
+            try:
                 self.ser = serial.Serial(self.port, baudrate=self.baud, timeout=self.timeout)
-                if not self.open_serial():
-                    raise Exception()
-            logger.info("Serial connected.")
-            self.open()
-            self._flush()
-            self.close()
-            return True
-        except Exception as e:
-            print("Failed to connect to the serial.")
-            logger.error("Failed to connect to the serial.")
-            logger.error(e)
-        return False
+                time.sleep(1)
+                connected = self.open_serial()
+                if not connected:
+                    self.ser.close()
+                    baud_prev = 9600 if self.baud == 115200 else 115200
+                    self.ser = serial.Serial(self.port, baudrate=baud_prev, timeout=self.timeout)
+                    if not self.open_serial():
+                        raise Exception()
+                    if self.open():
+                        self.change_baud(self.baud)
+                        logger.info("The baud rate is changed to %s." % self.baud)
+                    self.ser.close()
+                    self.ser = serial.Serial(self.port, baudrate=self.baud, timeout=self.timeout)
+                    if not self.open_serial():
+                        raise Exception()
+                logger.info("Serial connected.")
+                self.open()
+                self._flush()
+                self.close()
+                return True
+            except Exception as e:
+                print("Failed to connect to the serial.")
+                logger.error("Failed to connect to the serial.")
+                logger.error(e)
+            return False
 
     def open_serial(self):
-        if not self.ser:
-            return False
-        if self.ser.isOpen():
-            self.ser.close()
-        self.ser.open()
-        time.sleep(0.1)
-        connected = self.open()
-        if connected is None:
-            return False
-        if connected:
-            self.close()
-            return True
-        else:
-            return False
+        with self.lock:
+            if not self.ser:
+                return False
+            if self.ser.isOpen():
+                self.ser.close()
+            self.ser.open()
+            time.sleep(0.1)
+            connected = self.open()
+            if connected is None:
+                return False
+            if connected:
+                self.close()
+                return True
+            else:
+                return False
 
     def close_serial(self):
-        if self.ser:
-            self.ser.close()
+        with self.lock:
+            if self.ser:
+                self.ser.close()
 
     def is_connected(self):
-        if self.ser and self.ser.isOpen():
-            return True
-        return False
+        with self.lock:
+            if self.ser and self.ser.isOpen():
+                return True
+            return False
 
     def _send_packet(self, cmd, param=0):
-        cmd = Fingerprint.COMMENDS[cmd]
-        param = [int(hex(param >> i & 0xFF), 16) for i in (0, 8, 16, 24)]
+        with self.lock:
+            cmd = Fingerprint.COMMENDS[cmd]
+            param = [int(hex(param >> i & 0xFF), 16) for i in (0, 8, 16, 24)]
 
-        packet = bytearray(12)
-        packet[0] = 0x55
-        packet[1] = 0xAA
-        packet[2] = 0x01
-        packet[3] = 0x00
-        packet[4] = param[0]
-        packet[5] = param[1]
-        packet[6] = param[2]
-        packet[7] = param[3]
-        packet[8] = cmd & 0x00FF
-        packet[9] = (cmd >> 8) & 0x00FF
-        chksum = sum(bytes(packet[:10]))
-        packet[10] = chksum & 0x00FF
-        packet[11] = (chksum >> 8) & 0x00FF
-        if self.ser and self.ser.writable():
-            self.ser.write(packet)
-            return True
-        else:
-            return False
+            packet = bytearray(12)
+            packet[0] = 0x55
+            packet[1] = 0xAA
+            packet[2] = 0x01
+            packet[3] = 0x00
+            packet[4] = param[0]
+            packet[5] = param[1]
+            packet[6] = param[2]
+            packet[7] = param[3]
+            packet[8] = cmd & 0x00FF
+            packet[9] = (cmd >> 8) & 0x00FF
+            chksum = sum(bytes(packet[:10]))
+            packet[10] = chksum & 0x00FF
+            packet[11] = (chksum >> 8) & 0x00FF
+            if self.ser and self.ser.writable():
+                self.ser.write(packet)
+                return True
+            else:
+                return False
 
     def _send_data(self, data, parameter=False): 
-        if self.ser and self.ser.writable():
-            print("length of written data : ", self.ser.write(data))
-            time.sleep(0.1)
-            print("SENDing DATA ...", end=' ')
-            ack, param, _, _ = self._read_packet()
-            print("✅")
-            if parameter:
-                if ack:
-                    return param
-                return -1
-            return ack
-        else:
-            return False
+        with self.lock: 
+            if self.ser and self.ser.writable():
+                print("length of written data : ", self.ser.write(data))
+                time.sleep(0.1)
+                print("SENDing DATA ...", end=' ')
+                ack, param, _, _ = self._read_packet()
+                print("✅")
+                if parameter:
+                    if ack:
+                        return param
+                    return -1
+                return ack
+            else:
+                return False
 
     def _flush(self):
-        while self.ser.readable() and self.ser.inWaiting() > 0:
-            p = self.ser.read(self.ser.inWaiting())
-            if p == b'':
-                break
+        with self.lock:
+            while self.ser.readable() and self.ser.inWaiting() > 0:
+                p = self.ser.read(self.ser.inWaiting())
+                if p == b'':
+                    break
 
     def _read(self):
-        if self.ser and self.ser.readable():
-            try:
-                p = self.ser.read()
-                if p == b'':
+        with self.lock:
+            if self.ser and self.ser.readable():
+                try:
+                    p = self.ser.read()
+                    if p == b'':
+                        return None
+                    return int(codecs.encode(p, 'hex_codec'), 16)
+                except:
                     return None
-                return int(codecs.encode(p, 'hex_codec'), 16)
-            except:
+            else:
                 return None
-        else:
-            return None
 
     def _read_header(self):
-        if self.ser and self.ser.readable():
-            firstbyte = self._read()
-            secondbyte = self._read()
-            return firstbyte, secondbyte
-        return None, None
+        with self.lock:
+            if self.ser and self.ser.readable():
+                firstbyte = self._read()
+                secondbyte = self._read()
+                return firstbyte, secondbyte
+            return None, None
 
     def _read_packet(self, wait=True):
         """
@@ -234,113 +246,121 @@ class Fingerprint():
         :return: ack, param, res, data
         """
         # Read response packet
-        packet = bytearray(12)
-        while True:
-            firstbyte, secondbyte = self._read_header()
-            if not firstbyte or not secondbyte:
-                if wait:
-                    continue
-                else:
-                    return None, None, None, None
-            elif firstbyte == Fingerprint.PACKET_RES_0 and secondbyte == Fingerprint.PACKET_RES_1:
-                break
-        packet[0] = firstbyte
-        packet[1] = secondbyte
-        p = self.ser.read(10)
-        packet[2:12] = p[:]
-
-        # Parse ACK
-        ack = True if packet[8] == Fingerprint.ACK else False
-
-        # Parse parameter
-        param = bytearray(4)
-        param[:] = packet[4:8]
-        if param is not None:
-            param = int(codecs.encode(param[::-1], 'hex_codec'), 16)
-
-        # Parse response
-        res = bytearray(2)
-        res[:] = packet[8:10]
-        if res is not None:
-            res = int(codecs.encode(res[::-1], 'hex_codec'), 16)
-
-        # Read data packet
-        data = None
-        if self.ser and self.ser.readable() and self.ser.inWaiting() > 0:
-            firstbyte, secondbyte = self._read_header()
-            if firstbyte and secondbyte:
-                # Data exists.
-                if firstbyte == Fingerprint.PACKET_DATA_0 and secondbyte == Fingerprint.PACKET_DATA_1:
-                    print(">> Data exists...")
-                    # print("FB-SB: ", firstbyte, secondbyte)
-                    data = bytearray()
-                    data.append(firstbyte)
-                    data.append(secondbyte)
-        read_buffer = b''                    
-        if data:
+        with self.lock:
+            packet = bytearray(12)
             while True:
-                chunk_size = 14400
-                p = self.ser.read(size=chunk_size)
-                read_buffer += p
-                # print(p, type(p))
-                if len(p) == 0:
-                    print(">> Transmission Completed . . .")
+                firstbyte, secondbyte = self._read_header()
+                if not firstbyte or not secondbyte:
+                    if wait:
+                        continue
+                    else:
+                        return None, None, None, None
+                elif firstbyte == Fingerprint.PACKET_RES_0 and secondbyte == Fingerprint.PACKET_RES_1:
                     break
+            packet[0] = firstbyte
+            packet[1] = secondbyte
+            p = self.ser.read(10)
+            packet[2:12] = p[:]
 
-        return ack, param, res, read_buffer
+            # Parse ACK
+            ack = True if packet[8] == Fingerprint.ACK else False
+
+            # Parse parameter
+            param = bytearray(4)
+            param[:] = packet[4:8]
+            if param is not None:
+                param = int(codecs.encode(param[::-1], 'hex_codec'), 16)
+
+            # Parse response
+            res = bytearray(2)
+            res[:] = packet[8:10]
+            if res is not None:
+                res = int(codecs.encode(res[::-1], 'hex_codec'), 16)
+
+            # Read data packet
+            data = None
+            if self.ser and self.ser.readable() and self.ser.inWaiting() > 0:
+                firstbyte, secondbyte = self._read_header()
+                if firstbyte and secondbyte:
+                    # Data exists.
+                    if firstbyte == Fingerprint.PACKET_DATA_0 and secondbyte == Fingerprint.PACKET_DATA_1:
+                        print(">> Data exists...")
+                        # print("FB-SB: ", firstbyte, secondbyte)
+                        data = bytearray()
+                        data.append(firstbyte)
+                        data.append(secondbyte)
+            read_buffer = b''                    
+            if data:
+                while True:
+                    chunk_size = 14400
+                    p = self.ser.read(size=chunk_size)
+                    read_buffer += p
+                    # print(p, type(p))
+                    if len(p) == 0:
+                        print(">> Transmission Completed . . .")
+                        break
+
+            return ack, param, res, read_buffer
 
     def open(self):
-        if self._send_packet("Open"):
-            ack, _, _, _ = self._read_packet(wait=False)
-            return ack
-        return None
-
-    def close(self):
-        if self._send_packet("Close"):
-            ack, _, _, _ = self._read_packet()
-            return ack
-        return None
-
-    def set_led(self, on):
-        if self._send_packet("CmosLed", 1 if on else 0):
-            ack, _, _, _ = self._read_packet()
-            return ack
-        return None
-
-    def get_enrolled_cnt(self):
-        if self._send_packet("GetEnrollCount"):
-            ack, param, _, _ = self._read_packet()
-            return param if ack else -1
-        return None
-
-    def is_finger_pressed(self):
-        print("Checking if finger is pressed or not.")
-        self.set_led(True)
-        time.sleep(1)
-        if self._send_packet("IsPressFinger"):
-            ack, param, _, _ = self._read_packet()
-            self.set_led(False)
-            if not ack:
-                return None
-            return True if param == 0 else False
-        else:
+        with self.lock:
+            if self._send_packet("Open"):
+                ack, _, _, _ = self._read_packet(wait=False)
+                return ack
             return None
 
+    def close(self):
+        with self.lock:
+            if self._send_packet("Close"):
+                ack, _, _, _ = self._read_packet()
+                return ack
+            return None
+
+    def set_led(self, on):
+        with self.lock:
+            if self._send_packet("CmosLed", 1 if on else 0):
+                ack, _, _, _ = self._read_packet()
+                return ack
+            return None
+
+    def get_enrolled_cnt(self):
+        with self.lock:
+            if self._send_packet("GetEnrollCount"):
+                ack, param, _, _ = self._read_packet()
+                return param if ack else -1
+            return None
+
+    def is_finger_pressed(self):
+        with self.lock:
+            print("Checking if finger is pressed or not.")
+            self.set_led(True)
+            time.sleep(1)
+            if self._send_packet("IsPressFinger"):
+                ack, param, _, _ = self._read_packet()
+                self.set_led(False)
+                if not ack:
+                    return None
+                return True if param == 0 else False
+            else:
+                return None
+
     def change_baud(self, baud=115200):
-        if self._send_packet("ChangeBaudrate", baud):
-            ack, _, _, _ = self._read_packet()
-            return True if ack else False
-        return None
+        with self.lock:
+            if self._send_packet("ChangeBaudrate", baud):
+                ack, _, _, _ = self._read_packet()
+                return True if ack else False
+            return None
 
     def capture_finger(self, best=False):
-        self.set_led(True)
-        time.sleep(1)
-        param = 0 if not best else 1
-        if self._send_packet("CaptureFinger", param):
-            ack, _, _, _ = self._read_packet()
-            self.set_led(False)
-            return ack
-        return None
+        with self.lock:
+            self.set_led(True)
+            time.sleep(1)
+            param = 0 if not best else 1
+            if self._send_packet("CaptureFinger", param):
+                ack, _, _, _ = self._read_packet()
+                self.set_led(False)
+                return ack
+            return None
 
     def GetImage(self):
         '''
@@ -348,118 +368,126 @@ class Fingerprint():
             Use StartDataDownload, and then GetNextDataPacket until done
             Returns: True (device confirming download starting)
         '''
-        if self._send_packet("GetImage"):
-            ack, param, res, data = self._read_packet()
-            if not ack:
+        with self.lock:
+            if self._send_packet("GetImage"):
+                ack, param, res, data = self._read_packet()
+                if not ack:
+                    return None, False
+                return data, True  if param == 0 else False
+            else:
                 return None, False
-            return data, True  if param == 0 else False
-        else:
-            return None, False
     
     def MakeTemplate(self):
-        if not self.capture_finger(best=True):
-            return None
-        if self._send_packet("MakeTemplate"):
-            ack, param, res, data = self._read_packet()
-            if not ack:
+        with self.lock:
+            if not self.capture_finger(best=True):
+                return None
+            if self._send_packet("MakeTemplate"):
+                ack, param, res, data = self._read_packet()
+                if not ack:
+                    return None, False
+                return data, True  if param == 0 else False
+            else:
                 return None, False
-            return data, True  if param == 0 else False
-        else:
-            return None, False
 
     def start_enroll(self, idx):
-        if self._send_packet("EnrollStart", idx):
-            ack, _, _, _ = self._read_packet()
-            return ack
-        return None
+        with self.lock:
+            if self._send_packet("EnrollStart", idx):
+                ack, _, _, _ = self._read_packet()
+                return ack
+            return None
 
     def enroll1(self):
-        if self._send_packet("Enroll1"):
-            ack, _, _, _ = self._read_packet()
-            return ack
-        return None
+        with self.lock:
+            if self._send_packet("Enroll1"):
+                ack, _, _, _ = self._read_packet()
+                return ack
+            return None
 
     def enroll2(self):
-        if self._send_packet("Enroll2"):
-            ack, _, _, _ = self._read_packet()
-            return ack
-        return None
+        with self.lock:
+            if self._send_packet("Enroll2"):
+                ack, _, _, _ = self._read_packet()
+                return ack
+            return None
 
     def enroll3(self):
-        if self._send_packet("Enroll3"):
-            ack, param, res, data = self._read_packet()
-            if not ack:
-                return None, False
-            return data, True  if param == 0 else False
-        return None, None
+        with self.lock:
+            if self._send_packet("Enroll3"):
+                ack, param, res, data = self._read_packet()
+                if not ack:
+                    return None, False
+                return data, True  if param == 0 else False
+            return None, None
 
     async def enroll(self, status_callback, idx=None, try_cnt=10, sleep=1 ):
-        if idx is None:
-            status_callback("Invalid ID provided")
-            return -1,None,None
-        
-        # Check whether the finger already exists or not
-        for i in range(try_cnt):
-            existingIdx = self.identify() 
-            if existingIdx is not None:
-                break
-            await asyncio.sleep(sleep)
-            status_callback("Checking existence...")
-
-        if  existingIdx is not None and existingIdx >= 0 and existingIdx != idx: 
-            status_callback(f"Deleting Previous Registration for ID: {existingIdx}" )
-            await asyncio.sleep(sleep)
-            deleteResult = self.delete(existingIdx)
-            if deleteResult == False:  
-                status_callback(f"Delete Failed for ID: {existingIdx}" )
-                await asyncio.sleep(sleep)
+        with self.lock:
+            if idx is None:
+                status_callback("Invalid ID provided")
                 return -1,None,None
-        status_callback("Start enrolling...")
-        cnt = 0
-        while True: 
-            if self.start_enroll(idx):
-                # Enrolling started
-                break
-            else:
-                cnt += 1
-                if cnt >= try_cnt:
-                    return -1, None , None 
-                await asyncio.sleep(sleep)
-
-        #Start enroll 1, 2, and 3
-        for enr_num, enr in enumerate(["enroll1", "enroll2"]):
-            status_callback("Start %s..." % enr)
-            cnt = 0
-            while not self.capture_finger(best=True):
-                cnt += 1
-                if cnt >= try_cnt:
-                    return -1, None , None
-                await asyncio.sleep(sleep)
-                status_callback("Capturing a fingerprint...")
-            cnt = 0
-            while not getattr(self, enr)():
-                cnt += 1
-                if cnt >= try_cnt:
-                    return -1, None ,None
-                await asyncio.sleep(sleep)
-                status_callback("Enrolling the captured fingerprint...")
             
-        if self.capture_finger(best=True):
-            status_callback("Start enroll3...")
-            data, downloadstat = self.enroll3()
-            if idx == -1:
-                return idx, data, downloadstat
-        # Enroll process finished
-        return idx, None, None
+            # Check whether the finger already exists or not
+            for i in range(try_cnt):
+                existingIdx = self.identify() 
+                if existingIdx is not None:
+                    break
+                await asyncio.sleep(sleep)
+                status_callback("Checking existence...")
+
+            if  existingIdx is not None and existingIdx >= 0 and existingIdx != idx: 
+                status_callback(f"Deleting Previous Registration for ID: {existingIdx}" )
+                await asyncio.sleep(sleep)
+                deleteResult = self.delete(existingIdx)
+                if deleteResult == False:  
+                    status_callback(f"Delete Failed for ID: {existingIdx}" )
+                    await asyncio.sleep(sleep)
+                    return -1,None,None
+            status_callback("Start enrolling...")
+            cnt = 0
+            while True: 
+                if self.start_enroll(idx):
+                    # Enrolling started
+                    break
+                else:
+                    cnt += 1
+                    if cnt >= try_cnt:
+                        return -1, None , None 
+                    await asyncio.sleep(sleep)
+
+            #Start enroll 1, 2, and 3
+            for enr_num, enr in enumerate(["enroll1", "enroll2"]):
+                status_callback("Start %s..." % enr)
+                cnt = 0
+                while not self.capture_finger(best=True):
+                    cnt += 1
+                    if cnt >= try_cnt:
+                        return -1, None , None
+                    await asyncio.sleep(sleep)
+                    status_callback("Capturing a fingerprint...")
+                cnt = 0
+                while not getattr(self, enr)():
+                    cnt += 1
+                    if cnt >= try_cnt:
+                        return -1, None ,None
+                    await asyncio.sleep(sleep)
+                    status_callback("Enrolling the captured fingerprint...")
+                
+            if self.capture_finger(best=True):
+                status_callback("Start enroll3...")
+                data, downloadstat = self.enroll3()
+                if idx == -1:
+                    return idx, data, downloadstat
+            # Enroll process finished
+            return idx, None, None
 
     def verifyTemplate(self, idx, data):
-        data_bytes = bytearray()
-        data_bytes.append(90)
-        data_bytes.append(165)
-        for ch in data:
-            data_bytes.append(ch)
-        if self._send_packet("VerifyTemplate1_1", param=idx):
-            ack, _, _, _ = self._read_packet()
+        with self.lock:
+            data_bytes = bytearray()
+            data_bytes.append(90)
+            data_bytes.append(165)
+            for ch in data:
+                data_bytes.append(ch)
+            if self._send_packet("VerifyTemplate1_1", param=idx):
+                ack, _, _, _ = self._read_packet()
             if ack:
                 sendstatus = self._send_data(data_bytes)
                 if sendstatus:
@@ -468,105 +496,111 @@ class Fingerprint():
                 return False
 
     def setTemplate(self, idx, data):
-        data_bytes = bytearray()
-        data_bytes.append(90)
-        data_bytes.append(165)
-        for ch in data:
-            data_bytes.append(ch)
-        if self._send_packet("SetTemplate", param=idx):
-            ack, _, _, _ = self._read_packet()
-            if ack:
-                if self._send_data(data_bytes):
-                    print(f'👍 setTemplate @ ID: {idx}')
-                    return True
+        with self.lock:
+            data_bytes = bytearray()
+            data_bytes.append(90)
+            data_bytes.append(165)
+            for ch in data:
+                data_bytes.append(ch)
+            if self._send_packet("SetTemplate", param=idx):
+                ack, _, _, _ = self._read_packet()
+                if ack:
+                    if self._send_data(data_bytes):
+                        print(f'👍 setTemplate @ ID: {idx}')
+                        return True
+                    return False
                 return False
-            return False
-        return False 
-    
-
-    def deleteAll(self):
-        res = self._send_packet("DeleteAll")
-        if res:
-            ack, _, _, _ = self._read_packet()
-            return ack
-        return False
-
-    def delete(self, idx):
-        if not isinstance(idx, int) or idx < 0:
-            print("Invalid ID")
             return False 
         
-        # Delete all fingerprints
-        res = self._send_packet("DeleteID", idx)
-        if res:
-            ack, _, _, _ = self._read_packet()
-            return ack
-        return False
+
+    def deleteAll(self):
+        with self.lock:
+            res = self._send_packet("DeleteAll")
+            if res:
+                ack, _, _, _ = self._read_packet()
+                return ack
+            return False
+
+    def delete(self, idx):
+        with self.lock:
+            if not isinstance(idx, int) or idx < 0:
+                print("Invalid ID")
+                return False 
+            
+            # Delete all fingerprints
+            res = self._send_packet("DeleteID", idx)
+            if res:
+                ack, _, _, _ = self._read_packet()
+                return ack
+            return False
 
     def identify(self):
-        if not self.capture_finger(best=True):
+        with self.lock:
+            if not self.capture_finger(best=True):
+                return None
+            if self._send_packet("Identify1_N"):
+                ack, param, _, _ = self._read_packet()
+                if ack:
+                    return param
+                else:
+                    return -1
             return None
-        if self._send_packet("Identify1_N"):
-            ack, param, _, _ = self._read_packet()
-            if ack:
-                return param
-            else:
-                return -1
-        return None
 
     def identifyTemplate(self, data):
-        data_bytes = bytearray()
-        data_bytes.append(90)
-        data_bytes.append(165)
-        for ch in data:
-            data_bytes.append(ch)
-        if self._send_packet("IdentifyTemplate1_N"):
-            ack, _, _, _ = self._read_packet()
-            if ack:
-                param = self._send_data(data_bytes, parameter=True)
-                return param
-            return -1
-        return None
+        with self.lock:
+            data_bytes = bytearray()
+            data_bytes.append(90)
+            data_bytes.append(165)
+            for ch in data:
+                data_bytes.append(ch)
+            if self._send_packet("IdentifyTemplate1_N"):
+                ack, _, _, _ = self._read_packet()
+                if ack:
+                    param = self._send_data(data_bytes, parameter=True)
+                    return param
+                return -1
+            return None
 
 
     def check_enrolled(self, idx):
-        #Check if a fingerprint is enrolled at the given ID. 
-        if not isinstance(idx, int) or idx < 0:
-            print("Invalid ID for check_enrolled.")
-            return False
-
-        if self._send_packet("CheckEnrolled", param=idx):
-            ack, param, res, _ = self._read_packet()
-            if ack: 
-                return True 
-            else:
-                print(f"Res:{res} Param:{param} {self.get_nack_description(param)}")
+        with self.lock:
+            #Check if a fingerprint is enrolled at the given ID. 
+            if not isinstance(idx, int) or idx < 0:
+                print("Invalid ID for check_enrolled.")
                 return False
-        else:
-            print("Failed to send CheckEnrolled command.")
-            return False
+
+            if self._send_packet("CheckEnrolled", param=idx):
+                ack, param, res, _ = self._read_packet()
+                if ack: 
+                    return True 
+                else:
+                    print(f"Res:{res} Param:{param} {self.get_nack_description(param)}")
+                    return False
+            else:
+                print("Failed to send CheckEnrolled command.")
+                return False
 
     def get_template(self, idx):
         #Downloads the fingerprint template stored at the specified ID.
         #Returns:
         #    template_data (bytes): The raw template data.
         #    success (bool): Whether the operation was successful. 
- 
-        if not isinstance(idx, int) or idx < 0:
-            print("Invalid ID.")
-            return None, False
-
-        if self._send_packet("GetTemplate", idx):
-            ack, param, res, data = self._read_packet()
-            if not ack:
-                print(f"Res:{res} Param:{param} {self.get_nack_description(param)}")
+        with self.lock:
+            if not isinstance(idx, int) or idx < 0:
+                print("Invalid ID.")
                 return None, False
 
-            if data and len(data) > 0: 
-                return data, True
+            if self._send_packet("GetTemplate", idx):
+                ack, param, res, data = self._read_packet()
+                if not ack:
+                    print(f"Res:{res} Param:{param} {self.get_nack_description(param)}")
+                    return None, False
+
+                if data and len(data) > 0: 
+                    return data, True
+                else:
+                    print("Template data is empty or missing.")
+                    return None, False 
             else:
-                print("Template data is empty or missing.")
-                return None, False 
-        else:
-            print("Failed to send GetTemplate command.")
-            return None, False
+                print("Failed to send GetTemplate command.")
+                return None, False
