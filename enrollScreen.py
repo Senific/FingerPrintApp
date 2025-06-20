@@ -179,10 +179,10 @@ class EnrollScreen(Screen):
  
  
     async def touch_callback(self, touched):
-        # if touched == True:
-        #     employee_sync.on_touch_callback = None
-        # else:
-        #     return
+        if touched == True:
+            employee_sync.on_touch_callback = None
+        else:
+            return
 
         PopupUtils.show_message_popup(f"Hello {touched}")
         # print(f"TOuched :: :: {touched} ")
