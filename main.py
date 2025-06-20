@@ -105,7 +105,11 @@ if is_raspberry:
             PopupUtils.dismiss_status_popup()
  
     
-    async def identify():   
+    async def identify():    
+        # Cancel previous scheduled "go back to main"
+        if hasattr(app, "mark_timeout_event") and app.mark_timeout_event:
+            app.mark_timeout_event.cancel()
+
         try:    
             fp.open()
             fp.set_led(True) 
@@ -115,16 +119,17 @@ if is_raspberry:
                     try: 
                         logInfo(f"Identified: {identifier}")
                         app =  App.get_running_app()  
-                        employee = await db.get_employeeByIdentifier(identifier) 
+                        employee = await db.get_employeeByIdentifier(identifier)  
                         if employee is not None:  
                             marked_time =  datetime.now()
                             app.marked_employee = employee
                             app.marked_time = marked_time
                             result = await db.insert_attendance(employee, marked_time)
-                            if result == True: 
+                            if result == True:  
+                                # Set screen to "mark"
                                 app.root.current = "mark" 
-                                await asyncio.sleep(5)
-                                app.root.current = "main"
+                                # Schedule new "go back to main" in 5 seconds
+                                app.mark_timeout_event = Clock.schedule_once(lambda dt: setattr(app.root, "current", "main"), 5)
                             else:
                                 raise RuntimeError("Failed At Marking to database")
                         else: 
