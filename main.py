@@ -105,9 +105,7 @@ if is_raspberry:
             PopupUtils.dismiss_status_popup()
  
     
-    async def identify():  
-        global lastEmployeeId 
-        lastEmployeeId = -1
+    async def identify():   
         try:    
             fp.open()
             fp.set_led(True) 
@@ -117,8 +115,7 @@ if is_raspberry:
                     try: 
                         logInfo(f"Identified: {identifier}")
                         app =  App.get_running_app()  
-                        employee = await db.get_employeeByIdentifier(identifier)
-                        lastEmployeeId = lastEmployeeId
+                        employee = await db.get_employeeByIdentifier(identifier) 
                         if employee is not None:  
                             marked_time =  datetime.now()
                             app.marked_employee = employee
@@ -127,9 +124,6 @@ if is_raspberry:
                             if result == True: 
                                 app.root.current = "mark" 
                                 await asyncio.sleep(5)
-                                if int(employee['id']) != lastEmployeeId:
-                                    #this is to prevent on going last task closing the markScreen
-                                    return
                                 app.root.current = "main"
                             else:
                                 raise RuntimeError("Failed At Marking to database")
