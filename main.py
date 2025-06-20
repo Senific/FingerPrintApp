@@ -175,7 +175,7 @@ if is_raspberry:
                 from employee_sync import on_touch_callback
                 if  on_touch_callback is not None:
                     logInfo("Touch Callback is Active") 
-                    touchResult = level = 0
+                    touchResult = level == 0
                     Clock.schedule_once(lambda dt: asyncio.ensure_future(on_touch_callback(touchResult)))
                 else:
                     logInfo("Touch Callback is None") 
