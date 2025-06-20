@@ -106,11 +106,14 @@ if is_raspberry:
  
     
     def resetScreen(app):
-        # Cancel previous scheduled "go back to main"
-        if hasattr(app, "mark_timeout_event") and app.mark_timeout_event:
-            app.mark_timeout_event.cancel()
-        PopupUtils.dismiss_status_popup()
-        app.root.current = "main" 
+        try:
+            # Cancel previous scheduled "go back to main"
+            if hasattr(app, "mark_timeout_event") and app.mark_timeout_event:
+                app.mark_timeout_event.cancel()
+            PopupUtils.dismiss_status_popup()
+            app.root.current = "main" 
+        except Exception as e:
+            logError(f"Screen Reset Error: {e}")
 
     async def identify():     
         try:  
