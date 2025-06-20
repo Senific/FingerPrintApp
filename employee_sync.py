@@ -332,6 +332,27 @@ class EmployeeSync:
 
             print("🧹 Old deleted attendance records cleaned up (older than 2 months).")
 
+    async def ProcessDownloaded(self, emp ):
+        emp_id = emp["ID"]
+        existingEmp = await self.db.get_employee(emp_id)
+        if emp["Deleted"]:
+            if existingEmp is not None: 
+                await self.db.delete_employee(emp_id)
+                for id in HelperUtils.get_identifiers(emp["identifiers"]):
+                    fp.delete(id)
+            self.delete_employee_image(emp_id)
+        else:
+            employee = Employee(emp_id, emp["Name"], emp["Code"], emp["Identifiers"], emp["Description"])
+            await self.db.upsert_employee(employee)
+            await self.download_employee_image(emp_id)
+            for identifier in HelperUtils.get_identifiers(employee.Identifiers): 
+                print(f'Deleting template for identifier: {identifier}' )
+                fp.delete(identifier)
+                templateData = await ApiUtils.get_fingerprint_template(identifier) 
+                if templateData is not None and len(templateData) > 0:
+                    print(f'Received template data {len(templateData)}' )
+                    fp.setTemplate(identifier, templateData)
+
     async def Download(self, last_syncTime):
         url = f"{self.api_url}/api/Employees/GetNewChanges?lastSyncDate={quote(last_syncTime)}"
         headers = {
@@ -353,26 +374,10 @@ class EmployeeSync:
         print(f"📦 Syncing {len(data)} employees...")
         
         for idx, emp in enumerate(data, 1):
-            emp_id = emp["ID"]
-            existingEmp = await self.db.get_employee(emp_id)
-            if emp["Deleted"]:
-                if existingEmp is not None: 
-                    await self.db.delete_employee(emp_id)
-                    for id in HelperUtils.get_identifiers(emp["identifiers"]):
-                        fp.delete(id)
-                self.delete_employee_image(emp_id)
-            else:
-                employee = Employee(emp_id, emp["Name"], emp["Code"], emp["Identifiers"], emp["Description"])
-                await self.db.upsert_employee(employee)
-                await self.download_employee_image(emp_id)
-                for identifier in HelperUtils.get_identifiers(employee.Identifiers): 
-                    print(f'Deleting template for identifier: {identifier}' )
-                    fp.delete(identifier)
-                    templateData = await ApiUtils.get_fingerprint_template(identifier) 
-                    if templateData is not None and len(templateData) > 0:
-                        print(f'Received template data {len(templateData)}' )
-                        fp.setTemplate(identifier, templateData)
+            self.ProcessDownloaded(emp)
             await asyncio.sleep(0.01)
+
+    
 
     async def sync(self):
         try:

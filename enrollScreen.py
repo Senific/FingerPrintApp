@@ -15,7 +15,7 @@ from kivy.uix.scrollview import ScrollView
 from kivy.app import App 
 from kivy.clock import Clock
 from asyncio import get_event_loop
-from employee_sync import IMAGES_DIR, fp
+from employee_sync import IMAGES_DIR, EmployeeDatabase, fp
 from fplib import fplib
 from popups import PopupUtils
 from helper import HelperUtils
@@ -25,7 +25,6 @@ import employee_sync
 class EnrollScreen(Screen): 
     fp : fplib = None
     selectedIdentifier : int
-
     def on_pre_enter(self):
         emp = App.get_running_app().employee_to_enroll  
         if emp:
@@ -77,12 +76,15 @@ class EnrollScreen(Screen):
         content_layout.add_widget(info_layout)
 
         footer_layout = BoxLayout(orientation='horizontal', spacing=10, size_hint=(1, 0.15))
+        self.sync_button = Button(text="Sync")
         self.enroll_button = Button(text="Start Enrollment") 
         self.back_button = Button(text="Back", size_hint=(0.3, 1))
 
+        self.sync_button.bind(on_release=self.sync_clicked)
         self.enroll_button.bind(on_release=self.start_enrollment) 
         self.back_button.bind(on_release=self.go_back)
 
+        footer_layout.add_widget(self.sync_button)
         footer_layout.add_widget(self.enroll_button) 
         footer_layout.add_widget(self.back_button)
 
@@ -91,6 +93,24 @@ class EnrollScreen(Screen):
 
         self.add_widget(root_layout)
  
+    def sync_clicked(self,instance):
+        Clock.schedule_once(lambda dt: asyncio.ensure_future(self.sync()))
+
+    async def sync(self):
+        db = EmployeeDatabase()
+        db.initialize()
+        sync = employee_sync.EmployeeSync(db=db)
+        emp = App.get_running_app().employee_to_enroll
+        emp['Deleted'] = 0
+        PopupUtils.show_status_popup()
+        PopupUtils.update_status_popup("Syncing...",0)
+        print("mmm")
+        logging.info("MMm")
+        await asyncio.sleep(1)
+        await sync.ProcessDownloaded(emp)
+        PopupUtils.update_status_popup("Completed", 2)
+        await asyncio.sleep(1)
+        PopupUtils.dismiss_status_popup()
 
     def start_enrollment(self, instance):
         emp = App.get_running_app().employee_to_enroll

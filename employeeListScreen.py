@@ -74,9 +74,9 @@ class EmployeeListScreen(Screen):
         db_path = os.path.join(RUNTIME_DIR, "employees.db")
         employees = []
         async with aiosqlite.connect(db_path) as db:
-            async with db.execute("SELECT ID, Name, Code,Identifiers FROM Employees ORDER BY Code ASC") as cursor:
+            async with db.execute("SELECT * FROM Employees ORDER BY Code ASC") as cursor:
                 async for row in cursor:
-                    employees.append({"ID": row[0], "Name": row[1], "Code": row[2], "Identifiers": row[3] })
+                    employees.append({"ID": row[0], "Name": row[1], "Code": row[2], "Identifiers": row[3], "Description": row[4] })
         return employees
 
     def update_ui(self, employee_list):
