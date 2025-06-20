@@ -187,13 +187,15 @@ class EnrollScreen(Screen):
         else:
             return 
 
-
         PopupUtils.update_status_popup("Checking", 0)
         if fp.is_finger_pressed():
             idx, data, downloadstatus = await asyncio.to_thread(lambda: asyncio.run( fp.enroll(self.enrollStatus_Callback, idx = self.selected_identifier)))
             if idx >= 0: 
                 data,status =  fp.get_template(idx)
                 try:
+                    if status == False or len(data) == 0:
+                        raise RuntimeError("Fetched template data is invalid")
+
                     PopupUtils.update_status_popup("Uploading...", 4)
                     asyncio.sleep(1)
                     await ApiUtils.upload_fingerprint_template(idx, data)
