@@ -114,8 +114,8 @@ if is_raspberry:
                         logInfo(f"Identified: {identifier}")
                         app =  App.get_running_app()  
                         employee = await db.get_employeeByIdentifier(identifier)
-                        if employee is not None: 
-                            Clock.schedule_once(lambda dt: asyncio.ensure_future(PopupUtils.dismiss_status_popup()))
+                        if employee is not None:  
+                            PopupUtils.dismiss_status_popup()
                             app.employee_to_enroll = employee
                             app.root.current = "mark" 
                             await asyncio.sleep(5)
