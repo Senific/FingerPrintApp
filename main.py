@@ -107,10 +107,11 @@ if is_raspberry:
     
     async def identify():     
         try:  
-            app =  App.get_running_app()   
+            app =  App.get_running_app()    
             # Cancel previous scheduled "go back to main"
             if hasattr(app, "mark_timeout_event") and app.mark_timeout_event:
                 app.mark_timeout_event.cancel()
+            app.root.current = "main" 
 
             fp.open()
             fp.set_led(True) 
