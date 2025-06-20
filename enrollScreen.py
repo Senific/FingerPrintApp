@@ -183,12 +183,12 @@ class EnrollScreen(Screen):
         #     employee_sync.on_touch_callback = None
         # else:
         #     return
-        
+        print(f"TOuched :: :: {touched} ")
         fp.set_led(True)
         await asyncio.sleep(1)
         fp.set_led(False) 
-        employee_sync.on_touch_callback = None
-        return
+        #employee_sync.on_touch_callback = None
+        
         # PopupUtils.update_status_popup("Checking", 0)
         # if fp.is_finger_pressed():
         #     idx, data, downloadstatus = await asyncio.to_thread(lambda: asyncio.run( fp.enroll(self.enrollStatus_Callback, idx = int(id))))
