@@ -103,12 +103,13 @@ class EnrollScreen(Screen):
         emp = App.get_running_app().employee_to_enroll
         emp['Deleted'] = 0
         PopupUtils.show_status_popup()
-        PopupUtils.update_status_popup("Syncing...",0)
-        print("mmm")
-        logging.info("MMm")
+        PopupUtils.update_status_popup("Syncing...",0) 
         await asyncio.sleep(1)
-        await sync.ProcessDownloaded(emp)
-        PopupUtils.update_status_popup("Completed", 2)
+        try:
+            await sync.ProcessDownloaded(emp)
+            PopupUtils.update_status_popup("Completed", 2)
+        except Exception as e:
+            PopupUtils.update_status_popup("Sync Failed!", 1)
         await asyncio.sleep(1)
         PopupUtils.dismiss_status_popup()
 
