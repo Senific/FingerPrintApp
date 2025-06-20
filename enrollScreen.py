@@ -193,8 +193,8 @@ class EnrollScreen(Screen):
                 if idx >= 0: 
                     data,status =  fp.get_template(idx)
                     try:
-                        if status == False or len(data) == 0:
-                            raise RuntimeError("Fetched template data is invalid")
+                        # if status == False or len(data) == 0:
+                        #     raise RuntimeError("Fetched template data is invalid")
 
                         PopupUtils.update_status_popup("Uploading...", 4)
                         asyncio.sleep(1)
