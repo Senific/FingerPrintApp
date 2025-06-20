@@ -242,11 +242,11 @@ class BackgroundSyncThread(threading.Thread):
 
    
 if __name__ == "__main__": 
-    # try:
-    #     sync_thread = BackgroundSyncThread()
-    #     sync_thread.start()  
-    # except Exception as e:
-    #     logging.error(f"Background sync failed to start: {e}")
+    try:
+        sync_thread = BackgroundSyncThread()
+        sync_thread.start()  
+    except Exception as e:
+        logging.error(f"Background sync failed to start: {e}")
 
     try:
         FingerprintApp().run()
