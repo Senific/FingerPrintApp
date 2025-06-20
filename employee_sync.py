@@ -305,7 +305,7 @@ class EmployeeSync:
             if not records:
                 print("✅ No attendances to upload.")
                 return
-            else
+            else:
                 print(f"{len(records)} records are uploading")
 
             for row in records:
