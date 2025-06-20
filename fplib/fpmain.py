@@ -56,7 +56,7 @@ class Fingerprint():
     NACK = 0x31
  
     def __init__(self):
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()
 
         #self.port = 'COM6'
         self.port = '/dev/serial0'
