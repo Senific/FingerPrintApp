@@ -104,8 +104,10 @@ if is_raspberry:
             await asyncio.sleep(2)
             PopupUtils.dismiss_status_popup()
  
-    lastEmployeeId :int = -1
+    
     async def identify():  
+        global lastEmployeeId 
+        lastEmployeeId = -1
         try:    
             fp.open()
             fp.set_led(True) 
