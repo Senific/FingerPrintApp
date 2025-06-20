@@ -290,10 +290,11 @@ class EmployeeSync:
         except Exception as e:
             print(f"❌ Request failed: {e}")
             raise
+ 
 
-    async def upload_attendances(self):
+
+    async def Upload(self):
         print("📤 Uploading attendances...")
-
         async with aiosqlite.connect(self.db.db_path) as db:
             async with db.execute("""
                 SELECT ID, Employee_ID, Code, Name, Time, State
@@ -319,7 +320,7 @@ class EmployeeSync:
 
                     print(f"✅ Uploaded and marked as deleted attendance ID {local_id}")
                 except Exception as e:
-                    print(f"❌ Error while uploading attendance ID {local_id}: {e}")
+                    raise RuntimeError(f"❌ Error while uploading attendance ID {local_id}: {e}")
 
             # 🧹 Delete records older than 2 months where Deleted = 1
             two_months_ago = (datetime.now() - timedelta(days=60)).strftime("%Y-%m-%d %H:%M:%S")
@@ -331,7 +332,48 @@ class EmployeeSync:
 
             print("🧹 Old deleted attendance records cleaned up (older than 2 months).")
 
+    async def Download(self, last_syncTime):
+        url = f"{self.api_url}/api/Employees/GetNewChanges?lastSyncDate={quote(last_syncTime)}"
+        headers = {
+            "Authorization": f"Bearer {self.token}",
+            "SystemCode": self.system_code
+        }
+
+        try:
+            response = await self.client.get(url, headers=headers)
+            if response.status_code == 401:
+                await self.authenticate()
+                headers["Authorization"] = f"Bearer {self.token}"
+                response = await self.client.get(url, headers=headers)
+            response.raise_for_status()
+            data = response.json()
+        except Exception as e: 
+            raise RuntimeError(f"Sync Failed: {e}")
+
+        print(f"📦 Syncing {len(data)} employees...")
         
+        for idx, emp in enumerate(data, 1):
+            emp_id = emp["ID"]
+            existingEmp = await self.db.get_employee(emp_id)
+            if emp["Deleted"]:
+                if existingEmp is not None: 
+                    await self.db.delete_employee(emp_id)
+                    for id in HelperUtils.get_identifiers(emp["identifiers"]):
+                        fp.delete(id)
+                self.delete_employee_image(emp_id)
+            else:
+                employee = Employee(emp_id, emp["Name"], emp["Code"], emp["Identifiers"], emp["Description"])
+                await self.db.upsert_employee(employee)
+                await self.download_employee_image(emp_id)
+                for identifier in HelperUtils.get_identifiers(employee.Identifiers): 
+                    print(f'Deleting template for identifier: {identifier}' )
+                    fp.delete(identifier)
+                    templateData = await ApiUtils.get_fingerprint_template(identifier) 
+                    if templateData is not None and len(templateData) > 0:
+                        print(f'Received template data {len(templateData)}' )
+                        fp.setTemplate(identifier, templateData)
+            await asyncio.sleep(0.01)
+
     async def sync(self):
         try:
             print(f"🔄 Starting sync... System Code: {self.system_code}") 
@@ -355,51 +397,9 @@ class EmployeeSync:
                 print("❌ Server time unavailable")
                 return
 
-            url = f"{self.api_url}/api/Employees/GetNewChanges?lastSyncDate={quote(last_sync)}"
-            headers = {
-                "Authorization": f"Bearer {self.token}",
-                "SystemCode": self.system_code
-            }
+            await self.Download(last_sync)
+            await self.Upload()
 
-            try:
-                response = await self.client.get(url, headers=headers)
-                if response.status_code == 401:
-                    await self.authenticate()
-                    headers["Authorization"] = f"Bearer {self.token}"
-                    response = await self.client.get(url, headers=headers)
-                response.raise_for_status()
-                data = response.json()
-            except Exception as e:
-                print(f"❌ Sync failed: {e}")
-                return
-
-            print(f"📦 Syncing {len(data)} employees...")
-            
-            for idx, emp in enumerate(data, 1):
-                emp_id = emp["ID"]
-                if emp["Deleted"]:
-                    existingEmp = await self.db.get_employee(emp_id)
-                    if existingEmp is not None: 
-                        await self.db.delete_employee(emp_id)
-                        for id in HelperUtils.get_identifiers(emp["identifiers"]):
-                            fp.delete(id)
-                    self.delete_employee_image(emp_id)
-                    print("is initialized:", init)
-                else:
-                    employee = Employee(emp_id, emp["Name"], emp["Code"], emp["Identifiers"], emp["Description"])
-                    await self.db.upsert_employee(employee)
-                    await self.download_employee_image(emp_id)
-                    for identifier in HelperUtils.get_identifiers(employee.Identifiers): 
-                        print(f'Deleting template for identifier: {identifier}' )
-                        fp.delete(identifier)
-                        templateData = await ApiUtils.get_fingerprint_template(identifier) 
-                        if templateData is not None and len(templateData) > 0:
-                            print(f'Received template data {len(templateData)}' )
-                            fp.setTemplate(identifier, templateData)
-                await asyncio.sleep(0.01)
-
-            # 🔼 Upload and clear local attendances
-            await self.upload_attendances()
             self.save_last_sync_time(new_sync_time)
             print(f"✅ Sync completed. Last sync updated to: {new_sync_time}")
         except Exception as e:
