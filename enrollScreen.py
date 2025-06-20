@@ -183,8 +183,8 @@ class EnrollScreen(Screen):
         #     employee_sync.on_touch_callback = None
         # else:
         #     return
-
-        PopupUtils.show_message_popup(f"Hello {touched}")
+        if touched == True:
+            PopupUtils.show_message_popup(f"Hello {touched}")
         # print(f"TOuched :: :: {touched} ")
         # fp.set_led(True)
         # await asyncio.sleep(1)
