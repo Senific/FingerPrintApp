@@ -117,7 +117,7 @@ if is_raspberry:
                         if employee is not None:  
                             app.employee_to_enroll = employee
                             app.root.current = "mark" 
-                            await asyncio.sleep(2)
+                            await asyncio.sleep(3)
                             app.root.current = "main"
                         else: 
                             logInfo("No employee found for identifier in DB!") 
