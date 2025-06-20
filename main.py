@@ -104,6 +104,7 @@ if is_raspberry:
             await asyncio.sleep(2)
             PopupUtils.dismiss_status_popup()
  
+    lastEmployeeId :int = -1
     async def identify():  
         try:    
             fp.open()
@@ -115,6 +116,7 @@ if is_raspberry:
                         logInfo(f"Identified: {identifier}")
                         app =  App.get_running_app()  
                         employee = await db.get_employeeByIdentifier(identifier)
+                        lastEmployeeId = lastEmployeeId
                         if employee is not None:  
                             marked_time =  datetime.now()
                             app.marked_employee = employee
@@ -123,6 +125,9 @@ if is_raspberry:
                             if result == True: 
                                 app.root.current = "mark" 
                                 await asyncio.sleep(5)
+                                if int(employee['id']) != lastEmployeeId:
+                                    #this is to prevent on going last task closing the markScreen
+                                    return
                                 app.root.current = "main"
                             else:
                                 raise RuntimeError("Failed At Marking to database")
@@ -150,7 +155,7 @@ if is_raspberry:
 
     def on_touch(gpio, level, tick):
         print
-        if App.get_running_app().root.current == "main":
+        if App.get_running_app().root.current == "main" or App.get_running_app().root.current == "mark":
             if level == 0: 
                 Clock.schedule_once(lambda dt: asyncio.ensure_future(identify()))
                 logInfo("👆 Finger touched")
