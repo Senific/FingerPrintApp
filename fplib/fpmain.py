@@ -522,8 +522,7 @@ class Fingerprint():
     def delete(self, idx):
         with self.lock:
             if not isinstance(idx, int) or idx < 0:
-                HelperUtils.logInfo("Invalid ID")
-                return False 
+                raise RuntimeError("Invalid ID") 
             
             # Delete all fingerprints 
             res = self._send_packet("DeleteID", idx) 
@@ -564,8 +563,7 @@ class Fingerprint():
         with self.lock:
             #Check if a fingerprint is enrolled at the given ID. 
             if not isinstance(idx, int) or idx < 0:
-                HelperUtils.logInfo("Invalid ID for check_enrolled.")
-                return False
+                raise RuntimeError("Invalid ID") 
 
             if self._send_packet("CheckEnrolled", param=idx):
                 ack, param, res, _ = self._read_packet()
@@ -575,8 +573,8 @@ class Fingerprint():
                     HelperUtils.logInfo(f"Res:{res} Param:{param} {self.get_nack_description(param)}")
                     return False
             else:
-                HelperUtils.logInfo("Failed to send CheckEnrolled command.")
-                return False
+                raise RuntimeError("Failed to send CheckEnrolled command.")
+                #return False
 
     def get_template(self, idx):
         #Downloads the fingerprint template stored at the specified ID.
@@ -585,8 +583,7 @@ class Fingerprint():
         #    success (bool): Whether the operation was successful. 
         with self.lock:
             if not isinstance(idx, int) or idx < 0:
-                HelperUtils.logInfo("Invalid ID.")
-                return None, False
+                raise RuntimeError("Invalid ID") 
 
             if self._send_packet("GetTemplate", idx):
                 ack, param, res, data = self._read_packet()
@@ -599,6 +596,6 @@ class Fingerprint():
                 else:
                     HelperUtils.logInfo("Template data is empty or missing.")
                     return None, False 
-            else:
-                HelperUtils.logInfo("Failed to send GetTemplate command.")
-                return None, False
+            else: 
+                raise RuntimeError("Failed to send GetTemplate command.")
+                #return None, False

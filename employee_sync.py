@@ -350,13 +350,16 @@ class EmployeeSync:
             await self.download_employee_image(emp_id)
             for id in HelperUtils.get_identifiers(employee.Identifiers): 
                 HelperUtils.logInfo(f'Deleting template for identifier: {id}' )
-                if fp.delete(id) is not True: 
-                    raise RuntimeError("Failed Deleting FingerPrint from Sensor")
+                
+                if fp.check_enrolled(id):
+                    HelperUtils(f"FP Found for ID {id}")
+                    if fp.delete(id) is not True: 
+                        raise RuntimeError("Failed Deleting FingerPrint from Sensor")
+                    
                 templateData = await ApiUtils.get_fingerprint_template(id) 
                 if templateData is not None and len(templateData) > 0:
                     HelperUtils.logInfo(f'Received template data {len(templateData)}' )
-                    templateSetResult = fp.setTemplate(id, templateData)
-                    if templateSetResult == False:
+                    if fp.setTemplate(id, templateData) != True:
                         raise RuntimeError("Failed Setting template to sensor")
                         
 
