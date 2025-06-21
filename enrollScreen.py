@@ -231,10 +231,11 @@ class EnrollScreen(Screen):
                             raise RuntimeError("Fetched template data is invalid")
 
                         PopupUtils.update_status_popup("Uploading...", 4)
-                        asyncio.sleep(1)
+                        await asyncio.sleep(1)
                         await ApiUtils.upload_fingerprint_template(idx, data)
                         PopupUtils.update_status_popup("Successfully Enrolled!", 2)
                     except Exception as e: 
+                        HelperUtils.logError(f"Reached HERE! {e}")
                         PopupUtils.update_status_popup(f"Failed {e}", 1)
                         HelperUtils.logError(e)
                         fp.delete(idx) 
