@@ -69,9 +69,9 @@ if sys.platform == "linux":
         pass
 
 # Configure Kivy
-Config.set('input', 'mouse', 'mouse,multitouch_on_demand')
-Config.set('graphics', 'show_cursor', '0' if is_raspberry else '1')
-Config.set('modules', 'touchring', '')
+#Config.set('input', 'mouse', 'mouse,multitouch_on_demand')
+#Config.set('graphics', 'show_cursor', '0' if is_raspberry else '1')
+#Config.set('modules', 'touchring', '')
 
 # Set window size
 Window.size = (480, 320)
