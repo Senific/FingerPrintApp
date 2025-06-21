@@ -504,6 +504,7 @@ class Fingerprint():
                 raise  RuntimeError(f"Template already registered to {existingId}")
 
             HelperUtils.logInfo("Send Template Set Packet")
+            HelperUtils.logInfo("Template length:", len(data))
             if self._send_packet("SetTemplate", param=idx):
                 ack, param, res, data_ = self._read_packet() 
                 print(f"Ack {ack} , Param {param} , Res {res} , Data {data_} Original data {data}")
