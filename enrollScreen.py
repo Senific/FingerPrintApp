@@ -264,8 +264,7 @@ class EnrollScreen(Screen):
 
     async def perform_enroll(self, id): 
         PopupUtils.show_status_popup()
-        PopupUtils.update_status_popup("Please place finger...", 3)
-
+        PopupUtils.update_status_popup("Please place finger...", 6)
         employee_sync.on_touch_callback = self.touch_callback 
        
        

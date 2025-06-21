@@ -476,7 +476,7 @@ class Fingerprint():
                     await asyncio.sleep(sleep)
 
             if self.capture_finger(best=True):
-                status_callback("Start enroll3...",3)
+                status_callback("Start enroll3...",0)
                 data, downloadstat = self.enroll3()
                 if idx == -1:
                     return idx, data, downloadstat
