@@ -217,6 +217,7 @@ class EnrollScreen(Screen):
                     PopupUtils.update_status_popup(f"Deleting Previous Registration for ID: {existingIdx}",0)
                     await asyncio.sleep(1)
                     deleteResult = fp.delete(existingIdx)
+                    await ApiUtils.delete_fingerprint_template(existingIdx)
                     if deleteResult == False:  
                         PopupUtils.update_status_popup(f"Delete Failed for ID: {existingIdx}" ,1)
                         await asyncio.sleep(1) 
