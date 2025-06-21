@@ -150,7 +150,7 @@ if is_raspberry:
 
     def on_touch(gpio, level, tick): 
         app = App.get_running_app() 
-        if app.root.current == "main" or App.get_running_app().root.current == "mark":
+        if app.root.current != "enroll":
             if level == 0: 
                 Clock.schedule_once(lambda dt: asyncio.ensure_future(identify()))
                 HelperUtils.logInfo("👆 Finger touched")
