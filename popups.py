@@ -4,6 +4,7 @@ from kivy.uix.button import Button
 from kivy.uix.popup import Popup
 from kivy.uix.image import Image
 from kivy.uix.boxlayout import BoxLayout
+from kivy.clock import Clock
 
 class PopupUtils:
     status_popup:Popup = None
