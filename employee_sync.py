@@ -387,10 +387,14 @@ class EmployeeSync:
         HelperUtils.logInfo(f"📦 Syncing {len(data)} employees...")
         
         for idx, emp in enumerate(data, 1):
-            await self.ProcessDownloaded(emp)
-            await asyncio.sleep(0.01)
-
-    
+            while True:
+                try:
+                    await self.ProcessDownloaded(emp)
+                    break  # ✅ success, exit retry loop
+                except Exception as ex:
+                    HelperUtils.logError(f"Process Download Failed (retrying): {ex}")
+                    await asyncio.sleep(0.5)  # avoid rapid-fire retry
+            await asyncio.sleep(0.01)  # slight delay between employees 
 
     async def sync(self):
         try:
