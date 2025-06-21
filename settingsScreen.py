@@ -6,13 +6,14 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.gridlayout import GridLayout
 from kivy.clock import Clock, mainthread
 from kivy.uix.image import Image
-from employee_sync import get_api_config,RUNTIME_DIR, SETTINGS_FILE, FERNET_KEY_FILE, DB_FILE, LAST_SYNC_FILE, fp
+from employee_sync import get_api_config, RUNTIME_DIR, SETTINGS_FILE, FERNET_KEY_FILE, DB_FILE, LAST_SYNC_FILE, fp
 import os
 import json
 from cryptography.fernet import Fernet
 import httpx
 import threading
 import shutil
+import socket  # ✅ NEW
 
 def get_or_create_fernet():
     os.makedirs(RUNTIME_DIR, exist_ok=True)
@@ -24,7 +25,7 @@ def get_or_create_fernet():
         with open(FERNET_KEY_FILE, "rb") as f:
             key = f.read()
     return Fernet(key)
- 
+
 def save_settings(system_code, username, password):
     encrypted_pw = get_or_create_fernet().encrypt(password.encode()).decode()
     data = {
@@ -32,7 +33,7 @@ def save_settings(system_code, username, password):
         "username": username,
         "password": encrypted_pw
     }
-    
+
     os.makedirs(RUNTIME_DIR, exist_ok=True)
     with open(SETTINGS_FILE, "w") as f:
         json.dump(data, f)
@@ -59,8 +60,12 @@ class SettingsScreen(Screen):
         self.add_widget(background)
 
         layout = BoxLayout(orientation='vertical', padding=30, spacing=20)
-        form_layout = GridLayout(cols=2, spacing=10, size_hint=(1, 0.6))
 
+        # ✅ Add IP Label
+        self.ip_label = Label(text=f"IP Address: {self.get_local_ip()}", size_hint=(1, 0.1))
+        layout.add_widget(self.ip_label)
+
+        form_layout = GridLayout(cols=2, spacing=10, size_hint=(1, 0.6))
         self.system_code_input = TextInput(multiline=False)
         self.username_input = TextInput(multiline=False)
         self.password_input = TextInput(password=True, multiline=False)
@@ -95,6 +100,17 @@ class SettingsScreen(Screen):
 
         Clock.schedule_once(lambda dt: self.load_values(), 0.1)
 
+    # ✅ NEW METHOD
+    def get_local_ip(self):
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            ip = s.getsockname()[0]
+            s.close()
+            return ip
+        except Exception:
+            return "IP not available"
+
     def load_values(self):
         try:
             settings = load_settings()
@@ -108,7 +124,7 @@ class SettingsScreen(Screen):
         self.feedback_label.text = "Validating credentials..."
         system_code = self.system_code_input.text.strip()
         username = self.username_input.text.strip()
-        password = self.password_input.text.strip() 
+        password = self.password_input.text.strip()
         threading.Thread(target=self.validate_and_save, args=(system_code, username, password), daemon=True).start()
 
     def validate_and_save(self, system_code, username, password):
@@ -131,7 +147,7 @@ class SettingsScreen(Screen):
 
     @mainthread
     def process_validation_result(self, response, system_code, username, password):
-        if response.status_code == 200: 
+        if response.status_code == 200:
             self.perform_reset()
             save_settings(system_code, username, password)
             self.update_feedback(True, "✅ Settings saved successfully, Restarting...")
@@ -145,24 +161,17 @@ class SettingsScreen(Screen):
         self.back_button.disabled = not success
 
     def perform_reset(self):
-        try:   
-            # Delete specific files if they exist
+        try:
             if os.path.exists(DB_FILE):
                 os.remove(DB_FILE)
             if os.path.exists(LAST_SYNC_FILE):
                 os.remove(LAST_SYNC_FILE)
-
-            # Delete the whole RuntimeResources directory
             if os.path.exists(RUNTIME_DIR):
                 shutil.rmtree(RUNTIME_DIR)
- 
-            fp.deleteAll()
 
-            # if reboot:
-            #     threading.Thread(target=lambda: os.system("sudo reboot")).start()
+            fp.deleteAll()
         except Exception as e:
-            self.update_status(f"❌ Reset error: {e}")
-        
+            self.feedback_label.text = f"❌ Reset error: {e}"
 
     def go_back(self, instance):
         self.manager.current = "menu"
