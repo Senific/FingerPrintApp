@@ -400,7 +400,7 @@ class EmployeeSync:
                     break  # ✅ success, exit retry loop
                 except Exception as ex:
                     HelperUtils.logError(f"Process Download Failed (retrying): {ex}")
-                    await asyncio.sleep(2)  # avoid rapid-fire retry
+                    await asyncio.sleep(5)  # avoid rapid-fire retry
                 finally:
                     fp.close()
             await asyncio.sleep(.1)  # slight delay between employees 

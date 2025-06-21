@@ -495,9 +495,11 @@ class Fingerprint():
             data_bytes.append(165)
             for ch in data:
                 data_bytes.append(ch)
+            HelperUtils.logInfo("Send Template Set Packet")
             if self._send_packet("SetTemplate", param=idx):
-                ack, _, _, _ = self._read_packet()
+                ack, _, _, _ = self._read_packet() 
                 if ack:
+                    HelperUtils.logInfo("Send Data")
                     if self._send_data(data_bytes):
                         HelperUtils.logInfo(f'👍 setTemplate @ ID: {idx}')
                         return True
