@@ -238,6 +238,7 @@ class EnrollScreen(Screen):
                         PopupUtils.update_status_popup(f"Failed {e}", 1)
                         HelperUtils.logError(e)
                         fp.delete(idx) 
+                        await asyncio.sleep(2)
                         
                         
                     self.enrolling_in_progress = False
