@@ -195,9 +195,9 @@ class Fingerprint():
     def _send_data(self, data, parameter=False): 
         with self.lock: 
             if self.ser and self.ser.writable():
-                HelperUtils.logInfo("length of written data : ", self.ser.write(data))
+                HelperUtils.logInfo(f"length of written data : { self.ser.write(data)}")
                 time.sleep(0.1)
-                HelperUtils.logInfo("SENDing DATA ...", end=' ')
+                HelperUtils.logInfo("SENDing DATA ...")
                 ack, param, _, _ = self._read_packet()
                 HelperUtils.logInfo("✅")
                 if parameter:
