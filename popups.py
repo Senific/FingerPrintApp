@@ -142,5 +142,9 @@ class PopupUtils:
         if img_code == 5:
             PopupUtils.status_image.source = "assets/delete.png"            
 
-         
+
+    @staticmethod
+    def update_status_popup_threadsafe(msg, imageCode):
+        Clock.schedule_once(lambda dt: PopupUtils.update_status_popup(msg, imageCode))
+
          

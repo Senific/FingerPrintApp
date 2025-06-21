@@ -202,7 +202,7 @@ class EnrollScreen(Screen):
         await asyncio.sleep(2)
         PopupUtils.dismiss_status_popup()        
  
-   
+
     async def touch_callback(self, touched):
         if touched == True:
             employee_sync.on_touch_callback = None
@@ -230,12 +230,12 @@ class EnrollScreen(Screen):
                         if status == False:
                             raise RuntimeError("Fetched template data is invalid")
 
-                        PopupUtils.update_status_popup("Uploading...", 4)
+                        PopupUtils.update_status_popup_threadsafe("Uploading...", 4)
                         await asyncio.sleep(1)
                         await ApiUtils.upload_fingerprint_template(idx, data)
-                        PopupUtils.update_status_popup("Successfully Enrolled!", 2)
+                        PopupUtils.update_status_popup_threadsafe("Successfully Enrolled!", 2)
                     except Exception as e:  
-                        PopupUtils.update_status_popup(f"Failed {e}", 1)
+                        PopupUtils.update_status_popup_threadsafe(f"Failed {e}", 1)
                         await asyncio.sleep(2)
                         HelperUtils.logError(e)
                         fp.delete(idx) 
