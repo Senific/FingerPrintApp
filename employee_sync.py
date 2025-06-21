@@ -395,14 +395,14 @@ class EmployeeSync:
         for idx, emp in enumerate(data, 1):
             while True:
                 try:
-                    fp.close()
                     fp.open()
                     await self.ProcessDownloaded(emp)
-                    fp.close()
                     break  # ✅ success, exit retry loop
                 except Exception as ex:
                     HelperUtils.logError(f"Process Download Failed (retrying): {ex}")
                     await asyncio.sleep(2)  # avoid rapid-fire retry
+                finally:
+                    fp.close()
             await asyncio.sleep(.1)  # slight delay between employees 
 
     async def sync(self):
