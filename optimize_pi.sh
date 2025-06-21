@@ -30,8 +30,8 @@ fi
 # ------------------------------------------
 # 3. Disable HDMI if unused (saves power when using SPI LCD)
 # ------------------------------------------
-echo "➤ Disabling HDMI output..."
-/opt/vc/bin/tvservice -o
+# echo "➤ Disabling HDMI output..."
+# /opt/vc/bin/tvservice -o
 
 # Add HDMI off to startup (if not already present)
 RCLOCAL="/etc/rc.local"
@@ -74,3 +74,5 @@ fi
 # Done
 # ------------------------------------------
 echo "✅ Optimization complete. Please reboot to apply changes."
+
+#After this script ran you no longer can SSH with hostname, Instaead ssh with admin@ipaddress
