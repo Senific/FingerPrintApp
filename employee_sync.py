@@ -364,7 +364,8 @@ class EmployeeSync:
                         raise RuntimeError("Failed Setting template to sensor")
                     else:
                         HelperUtils.logInfo("FP Set Successfully!")   
-
+                else:
+                    HelperUtils.logWarning(f"Template data is not valid!")   
     async def Download(self, last_syncTime):
         url = f"{self.api_url}/api/Employees/GetNewChanges?lastSyncDate={quote(last_syncTime)}"
         headers = {

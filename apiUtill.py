@@ -111,7 +111,7 @@ class ApiUtils:
             response = await ApiUtils.client.get(url, headers=headers) 
             response.raise_for_status()
 
-            logging.info(f"📥 Fingerprint template retrieved for Identifier {identifier}")
+            logging.info(f"📥 Fingerprint template retrieved for Identifier {identifier} Len {len(response.content)}")
             return response.content  # binary template data
         except httpx.HTTPStatusError as e: 
             logging.error(f"❌ API Error ({e.response.status_code}): {e.response.text}")
