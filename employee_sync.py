@@ -311,16 +311,20 @@ class EmployeeSync:
 
             for row in records:
                 local_id, employee_id, code, name, time_str, state = row
-                try:
-                    await self.upload_attendance(employee_id, state, time_str)
+                while True:
+                    try:
+                        # 🔼 Upload attendance
+                        await self.upload_attendance(employee_id, state, time_str)
 
-                    # 🔁 Mark the record as deleted
-                    await db.execute("UPDATE Attendances SET Deleted = 1 WHERE ID = ?", (local_id,))
-                    await db.commit()
+                        # 🔁 Mark the record as deleted
+                        await db.execute("UPDATE Attendances SET Deleted = 1 WHERE ID = ?", (local_id,))
+                        await db.commit()
 
-                    HelperUtils.logInfo(f"✅ Uploaded and marked as deleted attendance ID {local_id}")
-                except Exception as e:
-                    raise RuntimeError(f"❌ Error while uploading attendance ID {local_id}: {e}")
+                        HelperUtils.logInfo(f"✅ Uploaded and marked as deleted attendance ID {local_id}")
+                        break  # ✅ success, exit retry loop
+                    except Exception as e:
+                        HelperUtils.logError(f"❌ Error uploading attendance ID {local_id}, retrying: {e}")
+                        await asyncio.sleep(2)  # prevent tight retry loop
 
             # 🧹 Delete records older than 2 months where Deleted = 1
             two_months_ago = (datetime.now() - timedelta(days=60)).strftime("%Y-%m-%d %H:%M:%S")
@@ -393,8 +397,8 @@ class EmployeeSync:
                     break  # ✅ success, exit retry loop
                 except Exception as ex:
                     HelperUtils.logError(f"Process Download Failed (retrying): {ex}")
-                    await asyncio.sleep(0.5)  # avoid rapid-fire retry
-            await asyncio.sleep(0.01)  # slight delay between employees 
+                    await asyncio.sleep(2)  # avoid rapid-fire retry
+            await asyncio.sleep(1)  # slight delay between employees 
 
     async def sync(self):
         try:
