@@ -430,14 +430,9 @@ class Fingerprint():
                 await asyncio.sleep(sleep)
                 status_callback("Checking existence...")
 
-            if  existingIdx is not None and existingIdx >= 0 and existingIdx != idx: 
-                status_callback(f"Deleting Previous Registration for ID: {existingIdx}" )
-                await asyncio.sleep(sleep)
-                deleteResult = self.delete(existingIdx)
-                if deleteResult == False:  
-                    status_callback(f"Delete Failed for ID: {existingIdx}" )
-                    await asyncio.sleep(sleep)
-                    return -1,None,None
+            if  existingIdx is not None and existingIdx >= 0 and existingIdx != idx:  
+                raise RuntimeError(f"Fingerprint already resistered for {existingIdx}")
+
             status_callback("Start enrolling...")
             cnt = 0
             while True: 

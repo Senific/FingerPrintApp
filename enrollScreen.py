@@ -182,8 +182,8 @@ class EnrollScreen(Screen):
                   
             PopupUtils.show_confirm_popup(message= f"Delete Enrollment for identifier {identifier}?",  yesCallback = yesCallback )
         else: 
-            self.selected_identifier = int( identifier )
-            Clock.schedule_once(lambda dt: asyncio.ensure_future(self.perform_enroll(identifier)))
+            self.selected_identifier = int( identifier )  
+            Clock.schedule_once(lambda dt: asyncio.ensure_future(self.perform_enroll(self.selected_identifier)))
 
     async def deleteConfirmed(self,identifier): 
         try:
@@ -211,6 +211,17 @@ class EnrollScreen(Screen):
         try:
             PopupUtils.update_status_popup("Checking", 0)
             if fp.is_finger_pressed():
+                # Check whether the finger already exists or not
+                existingIdx = fp.identify()  
+                if  existingIdx is not None and existingIdx >= 0 and existingIdx != self.selected_identifier: 
+                    PopupUtils.update_status_popup(f"Deleting Previous Registration for ID: {existingIdx}",0)
+                    await asyncio.sleep(1)
+                    deleteResult = fp.delete(existingIdx)
+                    if deleteResult == False:  
+                        PopupUtils.update_status_popup(f"Delete Failed for ID: {existingIdx}" ,1)
+                        await asyncio.sleep(1) 
+
+                #Start Enrolling
                 idx, data, downloadstatus = await asyncio.to_thread(lambda: asyncio.run( fp.enroll(self.enrollStatus_Callback, idx = self.selected_identifier)))
                 if idx >= 0: 
                     data,status =  fp.get_template(idx)
@@ -251,6 +262,7 @@ class EnrollScreen(Screen):
     async def perform_enroll(self, id): 
         PopupUtils.show_status_popup()
         PopupUtils.update_status_popup("Please place finger...", 3)
+
         employee_sync.on_touch_callback = self.touch_callback 
        
        
