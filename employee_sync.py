@@ -352,16 +352,18 @@ class EmployeeSync:
                 HelperUtils.logInfo(f'Deleting template for identifier: {id}' )
                 
                 if fp.check_enrolled(id):
-                    HelperUtils.logError(f"FP Found for ID {id}")
+                    HelperUtils.logInfo(f"FP Found for ID {id}")
                     if fp.delete(id) is not True: 
                         raise RuntimeError("Failed Deleting FingerPrint from Sensor")
-                    
+                    else:
+                        HelperUtils.logInfo("FP Deleted!")
                 templateData = await ApiUtils.get_fingerprint_template(id) 
                 if templateData is not None and len(templateData) > 0:
                     HelperUtils.logInfo(f'Received template data {len(templateData)}' )
                     if fp.setTemplate(id, templateData) != True:
                         raise RuntimeError("Failed Setting template to sensor")
-                        
+                    else:
+                        HelperUtils.logInfo("FP Set Successfully!")   
 
     async def Download(self, last_syncTime):
         url = f"{self.api_url}/api/Employees/GetNewChanges?lastSyncDate={quote(last_syncTime)}"
