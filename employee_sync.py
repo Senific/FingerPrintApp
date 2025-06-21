@@ -362,10 +362,10 @@ class EmployeeSync:
                     else:
                         HelperUtils.logInfo("FP Deleted!")
                 templateData = await ApiUtils.get_fingerprint_template(id) 
-                if templateData is not None and len(templateData) > 0:
-                    HelperUtils.logInfo(f'Received template data {len(templateData)}' )
+                if templateData is not None and len(templateData) > 0: 
                     if fp.setTemplate(id, templateData) != True:
-                        raise RuntimeError("Failed Setting template to sensor")
+                        HelperUtils.logWarning(f'Received template data {len(templateData)}' )
+                        HelperUtils.logWarning("Failed Setting template to sensor, template is not valid: ")
                     else:
                         HelperUtils.logInfo("FP Setted!")   
                 else:
