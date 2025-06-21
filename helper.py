@@ -34,15 +34,18 @@ class HelperUtils:
     @staticmethod
     def logInfo(msg):
         print(msg)
+        return
         logging.info(msg)
 
     @staticmethod 
     def logWarning(msg):
         print(f"Warning: {msg}")
+        return
         logging.warning(msg)
 
     @staticmethod 
     def logError(msg):
         print(f"Error: {msg}")
+        return
         logging.error(msg)
 
