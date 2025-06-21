@@ -466,7 +466,7 @@ class Fingerprint():
                 # 👇 Ask to lift the finger
                 status_callback("Remove your finger...")
                 await asyncio.sleep(sleep)
-                while self.is_finger_pressed() == False:
+                while self.is_finger_pressed():
                     await asyncio.sleep(sleep)
 
                 status_callback("Place your finger...")
