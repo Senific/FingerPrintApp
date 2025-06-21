@@ -403,7 +403,7 @@ class EmployeeSync:
                     await asyncio.sleep(5)  # avoid rapid-fire retry
                 finally:
                     fp.close()
-            await asyncio.sleep(.1)  # slight delay between employees 
+            await asyncio.sleep(.01)  # slight delay between employees 
 
     async def sync(self):
         try:
