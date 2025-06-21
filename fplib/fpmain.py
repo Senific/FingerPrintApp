@@ -495,6 +495,14 @@ class Fingerprint():
             data_bytes.append(165)
             for ch in data:
                 data_bytes.append(ch)
+
+            if self.check_enrolled(idx):
+                raise RuntimeError("Already enrolled!")
+            
+            existingId = self.identifyTemplate(data)
+            if existingId is not None and existingId >=0: 
+                raise  RuntimeError(f"Template already registered to {existingId}")
+
             HelperUtils.logInfo("Send Template Set Packet")
             if self._send_packet("SetTemplate", param=idx):
                 ack, _, _, _ = self._read_packet() 
