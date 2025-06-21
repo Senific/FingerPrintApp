@@ -395,7 +395,10 @@ class EmployeeSync:
         for idx, emp in enumerate(data, 1):
             while True:
                 try:
+                    fp.close()
+                    fp.open()
                     await self.ProcessDownloaded(emp)
+                    fp.close()
                     break  # ✅ success, exit retry loop
                 except Exception as ex:
                     HelperUtils.logError(f"Process Download Failed (retrying): {ex}")
