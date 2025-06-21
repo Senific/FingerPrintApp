@@ -235,8 +235,8 @@ class EnrollScreen(Screen):
                         await ApiUtils.upload_fingerprint_template(idx, data)
                         PopupUtils.update_status_popup("Successfully Enrolled!", 2)
                     except Exception as e:
-                        logging.error(e)
-                        PopupUtils.update_status_popup("Failed while uploading!", 1)
+                        HelperUtils.logError(e)
+                        PopupUtils.update_status_popup(f"Failed {e}", 1)
                         fp.delete(idx) 
                         
                         
