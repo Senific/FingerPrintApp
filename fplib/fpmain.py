@@ -597,8 +597,9 @@ class Fingerprint():
                 if not ack:
                     HelperUtils.logInfo(f"Res:{res} Param:{param} {self.get_nack_description(param)}")
                     return None, False
-
+ 
                 if data and len(data) > 0: 
+                    HelperUtils.logInfo(f"Data: {len(data)}")
                     return data, True
                 else:
                     HelperUtils.logInfo("Template data is empty or missing.")
