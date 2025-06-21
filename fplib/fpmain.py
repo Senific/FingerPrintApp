@@ -599,8 +599,12 @@ class Fingerprint():
                     return None, False
  
                 if data and len(data) > 0: 
-                    HelperUtils.logInfo(f"Data: {len(data)}")
-                    return data, True
+                    if(len(data) >= 502):
+                        HelperUtils.logInfo(f"Data: {len(data)}")
+                        return data, True
+                    else:
+                        HelperUtils.logInfo("Expected length of data not found")
+                        return data, False
                 else:
                     HelperUtils.logInfo("Template data is empty or missing.")
                     return None, False 
