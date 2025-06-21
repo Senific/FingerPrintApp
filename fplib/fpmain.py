@@ -459,10 +459,22 @@ class Fingerprint():
                 while not getattr(self, enr)():
                     cnt += 1
                     if cnt >= try_cnt:
-                        return -1, None ,None
-                    await asyncio.sleep(sleep)
+                        return -1, None ,None 
                     status_callback("Enrolling the captured fingerprint...")
+                    await asyncio.sleep(sleep)
+
+                # 👇 Ask to lift the finger
+                status_callback("Remove your finger...")
+                await asyncio.sleep(sleep)
+                while self.is_finger_pressed() == False:
+                    await asyncio.sleep(sleep)
+
+                status_callback("Place your finger...")
+                await asyncio.sleep(sleep)
                 
+                while self.is_finger_pressed() == False:
+                    await asyncio.sleep(sleep)
+
             if self.capture_finger(best=True):
                 status_callback("Start enroll3...")
                 data, downloadstat = self.enroll3()

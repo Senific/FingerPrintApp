@@ -234,9 +234,9 @@ class EnrollScreen(Screen):
                         asyncio.sleep(1)
                         await ApiUtils.upload_fingerprint_template(idx, data)
                         PopupUtils.update_status_popup("Successfully Enrolled!", 2)
-                    except Exception as e:
-                        HelperUtils.logError(e)
+                    except Exception as e: 
                         PopupUtils.update_status_popup(f"Failed {e}", 1)
+                        HelperUtils.logError(e)
                         fp.delete(idx) 
                         
                         
@@ -252,9 +252,9 @@ class EnrollScreen(Screen):
             
             employee_sync.on_touch_callback = None 
             self.enrolling_in_progress = False
-        except Exception as e:
-            logging.error(e)
-            PopupUtils.update_status_popup("Unexpected Error!", 1)
+        except Exception as e: 
+            PopupUtils.update_status_popup(f"Unexpected Error! {e}", 1)
+            HelperUtils.logError(e)
             await asyncio.sleep(2)
         finally:
             PopupUtils.dismiss_status_popup()
