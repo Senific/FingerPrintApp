@@ -352,7 +352,7 @@ class EmployeeSync:
                 HelperUtils.logInfo(f'Deleting template for identifier: {id}' )
                 
                 if fp.check_enrolled(id):
-                    HelperUtils(f"FP Found for ID {id}")
+                    HelperUtils.logError(f"FP Found for ID {id}")
                     if fp.delete(id) is not True: 
                         raise RuntimeError("Failed Deleting FingerPrint from Sensor")
                     
