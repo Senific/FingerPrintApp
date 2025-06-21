@@ -331,7 +331,7 @@ class Fingerprint():
         with self.lock:
             HelperUtils.logInfo("Checking if finger is pressed or not.")
             self.set_led(True)
-            time.sleep(1)
+            #time.sleep(1)
             if self._send_packet("IsPressFinger"):
                 ack, param, _, _ = self._read_packet()
                 self.set_led(False)
