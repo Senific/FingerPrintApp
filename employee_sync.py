@@ -361,6 +361,14 @@ class EmployeeSync:
                         raise RuntimeError("Failed Deleting FingerPrint from Sensor")
                     else:
                         HelperUtils.logInfo("FP Deleted!")
+                        
+                existingTemplateId = fp.identifyTemplate(templateData)
+                if existingTemplateId is not None and existingTemplateId >= 0: 
+                    HelperUtils.logWarning(f'Template already registered for identifier {existingTemplateId}' )
+                    HelperUtils.logWarning(f'Removing registrationf or Identifier: {existingTemplateId}' )
+                    if fp.delete(existingTemplateId) is not True: 
+                        raise RuntimeError("Failed Deleting FingerPrint from Sensor")
+
                 templateData = await ApiUtils.get_fingerprint_template(id) 
                 if templateData is not None and len(templateData) > 0: 
                     if fp.setTemplate(id, templateData) != True:
