@@ -490,30 +490,23 @@ class Fingerprint():
 
     def setTemplate(self, idx, data):
         with self.lock:
-            # 💡 Clean the input template
-            if data[0] == 0x5A and data[1] == 0xA5:
-                data = data[2:]
-            data = data[:498]  # Ensure exactly 498 bytes
-
-            if len(data) != 498:
-                raise RuntimeError(f"Invalid template size: {len(data)} (expected 498)")
-
             data_bytes = bytearray()
-            data_bytes.append(0x5A)
-            data_bytes.append(0xA5)
-            data_bytes.extend(data)
+            data_bytes.append(90)
+            data_bytes.append(165)
+            for ch in data:
+                data_bytes.append(ch)
 
             if self.check_enrolled(idx):
                 raise RuntimeError("Already enrolled!")
-
+            
             existingId = self.identifyTemplate(data)
-            if existingId is not None and existingId >= 0:
-                raise RuntimeError(f"Template already registered to {existingId}")
+            if existingId is not None and existingId >=0: 
+                raise  RuntimeError(f"Template already registered to {existingId}")
 
             HelperUtils.logInfo("Send Template Set Packet")
             HelperUtils.logInfo(f"Template length: {len(data)}")
             if self._send_packet("SetTemplate", param=idx):
-                ack, param, res, data_ = self._read_packet()
+                ack, param, res, data_ = self._read_packet() 
                 print(f"Ack {ack} , Param {param} , Res {res} , Data {data_} Original data {data}")
                 if ack:
                     HelperUtils.logInfo("Send Data")
@@ -522,8 +515,7 @@ class Fingerprint():
                         return True
                     return False
                 return False
-            return False
-
+            return False 
         
 
     def deleteAll(self):

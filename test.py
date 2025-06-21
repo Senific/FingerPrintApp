@@ -156,17 +156,13 @@ async def main():
             print("\n |__ identified id:", id)
         
 
-        def clean_template(raw):
-            if raw[0] == 0x5A and raw[1] == 0xA5:
-                raw = raw[2:]
-            return raw[:498] if len(raw) >= 498 else None
-
+ 
         # 7. settemplate - set a template data to device
         if task == 7:
             idx = int(input("Enter ID: "))
 
             
-            DATA =  clean_template( test_template_data_14)  #[] # a 502 length python list, that we get after running "task 3"
+            DATA = test_template_data  #[] # a 502 length python list, that we get after running "task 3"
             fp.delete(idx=idx)
             status = fp.setTemplate(idx=idx, data=DATA)
             print("\n |__ set template status :", status)
