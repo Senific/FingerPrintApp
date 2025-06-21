@@ -488,6 +488,7 @@ class Fingerprint():
                     return True
                 return False
 
+
     def setTemplate(self, idx, data):
         with self.lock:
             data_bytes = bytearray()
