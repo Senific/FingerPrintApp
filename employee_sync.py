@@ -371,7 +371,7 @@ class EmployeeSync:
                 else:
                     HelperUtils.logWarning(f"Template data is not valid!")   
         HelperUtils.logInfo(f"Employee {emp_id} processed!")
-        
+
     async def Download(self, last_syncTime):
         url = f"{self.api_url}/api/Employees/GetNewChanges?lastSyncDate={quote(last_syncTime)}"
         headers = {
@@ -400,7 +400,7 @@ class EmployeeSync:
                 except Exception as ex:
                     HelperUtils.logError(f"Process Download Failed (retrying): {ex}")
                     await asyncio.sleep(2)  # avoid rapid-fire retry
-            await asyncio.sleep(1)  # slight delay between employees 
+            await asyncio.sleep(.1)  # slight delay between employees 
 
     async def sync(self):
         try:
