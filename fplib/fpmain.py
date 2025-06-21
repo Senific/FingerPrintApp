@@ -419,7 +419,7 @@ class Fingerprint():
     async def enroll(self, status_callback, idx=None, try_cnt=10, sleep=1 ):
         with self.lock:
             if idx is None:
-                status_callback("Invalid ID provided")
+                status_callback("Invalid ID provided" , 1)
                 return -1,None,None
             
             # Check whether the finger already exists or not
@@ -428,12 +428,12 @@ class Fingerprint():
                 if existingIdx is not None:
                     break
                 await asyncio.sleep(sleep)
-                status_callback("Checking existence...")
+                status_callback("Checking existence...", 0)
 
             if  existingIdx is not None and existingIdx >= 0 and existingIdx != idx:  
                 raise RuntimeError(f"Fingerprint already resistered for {existingIdx}")
 
-            status_callback("Start enrolling...")
+            status_callback("Start enrolling...", 3)
             cnt = 0
             while True: 
                 if self.start_enroll(idx):
@@ -447,36 +447,36 @@ class Fingerprint():
 
             #Start enroll 1, 2, and 3
             for enr_num, enr in enumerate(["enroll1", "enroll2"]):
-                status_callback("Start %s..." % enr)
+                status_callback("Start %s..." % enr,3)
                 cnt = 0
                 while not self.capture_finger(best=True):
                     cnt += 1
                     if cnt >= try_cnt:
                         return -1, None , None
                     await asyncio.sleep(sleep)
-                    status_callback("Capturing a fingerprint...")
+                    status_callback("Capturing a fingerprint...",0)
                 cnt = 0
                 while not getattr(self, enr)():
                     cnt += 1
                     if cnt >= try_cnt:
                         return -1, None ,None 
-                    status_callback("Enrolling the captured fingerprint...")
+                    status_callback("Enrolling the captured fingerprint...",0)
                     await asyncio.sleep(sleep)
 
                 # 👇 Ask to lift the finger
-                status_callback("Remove your finger...")
+                status_callback("Remove your finger...",7)
                 await asyncio.sleep(sleep)
                 while self.is_finger_pressed():
                     await asyncio.sleep(sleep)
 
-                status_callback("Place your finger...")
+                status_callback("Place your finger...",6)
                 await asyncio.sleep(sleep)
                 
                 while self.is_finger_pressed() == False:
                     await asyncio.sleep(sleep)
 
             if self.capture_finger(best=True):
-                status_callback("Start enroll3...")
+                status_callback("Start enroll3...",3)
                 data, downloadstat = self.enroll3()
                 if idx == -1:
                     return idx, data, downloadstat

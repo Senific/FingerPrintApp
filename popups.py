@@ -141,8 +141,11 @@ class PopupUtils:
         if img_code == 4:
             PopupUtils.status_image.source = "assets/uploading.png"            
         if img_code == 5:
-            PopupUtils.status_image.source = "assets/delete.png"            
-
+            PopupUtils.status_image.source = "assets/delete.png"   
+        if img_code == 6:
+            PopupUtils.status_image.source = "assets/place_finger.png"                    
+        if img_code == 7:
+            PopupUtils.status_image.source = "assets/remove_finger.png"   
 
     @staticmethod
     def update_status_popup_threadsafe(msg, imageCode):
