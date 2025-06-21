@@ -93,9 +93,10 @@ async def main():
             
         # 7. settemplate - set a template data to device
         if task == 7:
+            idx = int(input("Enter ID: "))
             DATA = [] # a 502 length python list, that we get after running "task 3"
-            fp.delete(idx=0)
-            status = fp.setTemplate(idx=0, data=DATA)
+            fp.delete(idx=idx)
+            status = fp.setTemplate(idx=idx, data=DATA)
             print("\n |__ set template status :", status)
 
         # 8. Check Enrolled
