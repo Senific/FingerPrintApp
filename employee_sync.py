@@ -387,7 +387,7 @@ class EmployeeSync:
         HelperUtils.logInfo(f"📦 Syncing {len(data)} employees...")
         
         for idx, emp in enumerate(data, 1):
-            self.ProcessDownloaded(emp)
+            await self.ProcessDownloaded(emp)
             await asyncio.sleep(0.01)
 
     
