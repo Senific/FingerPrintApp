@@ -273,7 +273,7 @@ class EnrollScreen(Screen):
      
     def enrollStatus_Callback(self, msg, status_code):
         def update_label(dt): 
-            PopupUtils.update_status_popup(msg,0)
+            PopupUtils.update_status_popup(msg,status_code)
             #self.status_label_widget.text = msg 
             #self.status_label_widget.canvas.ask_update()
         logging.info(msg)
