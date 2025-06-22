@@ -58,16 +58,7 @@ def run_async_loop(dt):
 # Schedule the asyncio loop to tick with Kivy's clock
 Clock.schedule_interval(run_async_loop, 0)
 
- 
-# Detect Raspberry Pi
-is_raspberry = False
-if sys.platform == "linux":
-    try:
-        with open("/proc/cpuinfo", "r") as f:
-            is_raspberry = "Raspberry Pi" in f.read()
-    except:
-        pass
-
+  
 # Configure Kivy
 #Config.set('input', 'mouse', 'mouse,multitouch_on_demand')
 #Config.set('graphics', 'show_cursor', '0' if is_raspberry else '1')
@@ -80,7 +71,7 @@ Window.left = (Window.system_size[0] - 480) // 2
 Window.top = (Window.system_size[1] - 320) // 2
 
 
-if is_raspberry:
+if HelperUtils.is_raspberry_pi():
     import pigpio 
     TOUCH_PIN = 5  # GPIO5 (Physical pin 29)
 

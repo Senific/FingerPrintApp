@@ -169,7 +169,7 @@ class MenuScreen(Screen):
         try:
             conn = sqlite3.connect(DB_FILE)
             cursor = conn.cursor()
-            cursor.execute("SELECT ID, Name, Code, Description FROM Employees WHERE Code = ?", (code,))
+            cursor.execute("SELECT ID, Name, Code, Identifiers, Description FROM Employees WHERE Code = ?", (code,))
             row = cursor.fetchone()
             conn.close()
 
@@ -179,7 +179,8 @@ class MenuScreen(Screen):
                     "ID": row[0],
                     "Name": row[1],
                     "Code": row[2],
-                    "Description": row[3]
+                    "Identifiers": row[3],
+                    "Description": row[4]
                 } 
                 app.previous_screen = "menu"  # or "list"
                 self.manager.current = "enroll" 

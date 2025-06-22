@@ -133,8 +133,8 @@ class EnrollScreen(Screen):
         grid.bind(minimum_height=grid.setter('height'))
 
         for identifier in identifiers:
-            id_int = int(identifier)
-            is_enrolled = fp.check_enrolled(id_int)
+            id_int = int(identifier)  
+            is_enrolled = fp.check_enrolled() if HelperUtils.is_raspberry_pi() else False
 
             btn = Button(
                 text=f"{identifier}",
@@ -150,7 +150,15 @@ class EnrollScreen(Screen):
 
 
         # Wrap in ScrollView
-        scrollview = ScrollView(size_hint=(1, 1))
+        scrollview = ScrollView(
+            size_hint=(1, 1),
+            bar_width=10,
+            scroll_type=['bars', 'content'],
+            bar_color=(0.2, 0.2, 0.8, 1),  # Blue scrollbar
+            bar_inactive_color=(0.7, 0.7, 0.7, 1),
+            effect_cls='ScrollEffect'
+        )
+
         scrollview.add_widget(grid)
 
         # Create full content layout (ScrollView + Cancel button)

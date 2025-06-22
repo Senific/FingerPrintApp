@@ -1,5 +1,7 @@
+import logging
+import sys 
  
-import logging 
+
 class HelperUtils:
     @staticmethod
     def get_identifiers(identifiersStr):
@@ -21,11 +23,13 @@ class HelperUtils:
     @staticmethod
     #fp type
     def check_enrollment_status(fp, identifiersStr):
+
         count = 0 
         identifiers = HelperUtils.get_identifiers(identifiersStr)
-        for x in  identifiers:
-            if fp.check_enrolled(x):
-                count += 1
+        if HelperUtils.is_raspberry_pi():  
+            for x in  identifiers:
+                if fp.check_enrolled(x):
+                    count += 1
         status_message = f"Enrolled {count} of {len(identifiers)}" if count > 0 else "Not Enrolled"
         return count > 0, status_message
     
@@ -49,3 +53,8 @@ class HelperUtils:
         return
         logging.error(msg)
 
+
+    @staticmethod
+    def is_raspberry_pi():
+        return sys.platform == "linux"
+    

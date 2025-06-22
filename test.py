@@ -90,7 +90,7 @@ async def main():
         print("8. check enrolled")
         print("9. Get Template")
         print("10. Identify Template")
-        print("10. Set Security Level")
+        print("11. Set Security Level")
         print("")
         task = int( input("Task: " )) 
 
@@ -187,7 +187,7 @@ async def main():
             print("\n |__ identified id:", id)
 
         #11 Set Security
-        if task == 10:
+        if task == 11:
             level = int(input("Enter Security Level 0 to 5:")) 
             id = fp.set_security_level (level=level)
             print("\n |__ security level updated: ", id)

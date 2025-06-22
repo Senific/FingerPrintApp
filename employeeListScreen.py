@@ -15,6 +15,7 @@ from kivy.clock import Clock
 from kivy.app import App
 from employee_sync import EmployeeSync
 from employee_sync import RUNTIME_DIR
+from helper import HelperUtils
 
 
 class EmployeeListScreen(Screen):
@@ -168,7 +169,10 @@ class EmployeeListScreen(Screen):
 
 
     def goto_enroll(self, emp):
-        app = App.get_running_app()
-        app.employee_to_enroll = emp 
-        app.previous_screen = "employees"  
-        self.manager.current = "enroll"
+        try:
+            app = App.get_running_app()
+            app.employee_to_enroll = emp 
+            app.previous_screen = "employees"  
+            self.manager.current = "enroll"
+        except Exception as e:
+            HelperUtils.logError(e)
