@@ -23,8 +23,7 @@ class Fingerprint():
         'EnrollStart': 0x22,  # Start an enrollment
         'Enroll1': 0x23,  # Make 1st template for an enrollment
         'Enroll2': 0x24,  # Make 2nd template for an enrollment
-        'Enroll3': 0x25,
-        # Make 3rd template for an enrollment, merge three templates into one template, save merged template to the database
+        'Enroll3': 0x25, # Make 3rd template for an enrollment, merge three templates into one template, save merged template to the database
         'IsPressFinger': 0x26,  # Check if a finger is placed on the sensor
         'DeleteID': 0x40,  # Delete the fingerprint with the specified ID
         'DeleteAll': 0x41,  # Delete all fingerprints from the database
@@ -43,7 +42,8 @@ class Fingerprint():
         'UpgradeFirmware': 0x80,  # Not supported
         'UpgradeISOCDImage': 0x81,  # Not supported
         'Ack': 0x30,  # Acknowledge.
-        'Nack': 0x31  # Non-acknowledge
+        'Nack': 0x31,  # Non-acknowledge
+        'SetSecurityLevel': 0x28
     }
 
     PACKET_RES_0 = 0x55
@@ -624,3 +624,27 @@ class Fingerprint():
             else: 
                 raise RuntimeError("Failed to send GetTemplate command.")
                 #return None, False
+
+    def set_security_level(self, level):
+        """
+        Set the security level of the fingerprint module.
+
+        Levels:
+        1 - Lowest security (high acceptance, fast)
+        2 - Low
+        3 - Medium (default)
+        4 - High
+        5 - Highest security (low acceptance, slow)
+
+        Returns:
+            bool: True if successfully set, False otherwise
+        """
+        with self.lock:
+            if not isinstance(level, int) or not (1 <= level <= 5):
+                raise ValueError("Security level must be an integer between 1 and 5")
+
+            # Command ID 0x28 = SetSecurityLevel
+            if self._send_packet("SetSecurityLevel", param=level):
+                ack, _, _, _ = self._read_packet()
+                return ack
+            return False
