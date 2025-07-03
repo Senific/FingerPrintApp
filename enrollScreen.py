@@ -135,7 +135,7 @@ class EnrollScreen(Screen):
 
             for identifier in identifiers:
                 id_int = int(identifier)  
-                is_enrolled = fp.check_enrolled() if HelperUtils.is_raspberry_pi() else False
+                is_enrolled = fp.check_enrolled(id_int) if HelperUtils.is_raspberry_pi() else False
 
                 btn = Button(
                     text=f"{identifier}",
