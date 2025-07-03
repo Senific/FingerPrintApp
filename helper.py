@@ -50,7 +50,7 @@ class HelperUtils:
     @staticmethod 
     def logError(msg):
         print(f"Error: {msg}")
-        return
+        #return
         logging.error(msg)
 
 
