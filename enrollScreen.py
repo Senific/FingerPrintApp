@@ -115,69 +115,72 @@ class EnrollScreen(Screen):
         PopupUtils.dismiss_status_popup()
 
     def start_enrollment(self, instance):
-        emp = App.get_running_app().employee_to_enroll
-        if not emp or not emp.get('Identifiers'):
-            PopupUtils.show_message_popup( "No Identifiers Found!")
-            return
- 
-        identifiers = emp.get('Identifiers').split(",")  # test with many buttons
-        count = len(identifiers)
+        try:
+            emp = App.get_running_app().employee_to_enroll
+            if not emp or not emp.get('Identifiers'):
+                PopupUtils.show_message_popup( "No Identifiers Found!")
+                return
+    
+            identifiers = emp.get('Identifiers').split(",")  # test with many buttons
+            count = len(identifiers)
 
-        # Smart columns: square root logic
-        columns = max(1, math.ceil(math.sqrt(count)))
+            # Smart columns: square root logic
+            columns = max(1, math.ceil(math.sqrt(count)))
 
-        HelperUtils.logInfo(f"Identifiers count = {count}, smart columns = {columns}")
+            HelperUtils.logInfo(f"Identifiers count = {count}, smart columns = {columns}")
 
-        # Build GridLayout
-        grid = GridLayout(cols=columns, spacing=10, padding=10, size_hint_y=None)
-        grid.bind(minimum_height=grid.setter('height'))
+            # Build GridLayout
+            grid = GridLayout(cols=columns, spacing=10, padding=10, size_hint_y=None)
+            grid.bind(minimum_height=grid.setter('height'))
 
-        for identifier in identifiers:
-            id_int = int(identifier)  
-            is_enrolled = fp.check_enrolled() if HelperUtils.is_raspberry_pi() else False
+            for identifier in identifiers:
+                id_int = int(identifier)  
+                is_enrolled = fp.check_enrolled() if HelperUtils.is_raspberry_pi() else False
 
-            btn = Button(
-                text=f"{identifier}",
-                size_hint_y=None,
-                height=50,
-                background_color=(0, 1, 0, 1) if is_enrolled else (1, 1, 1, 1)  # green if enrolled
+                btn = Button(
+                    text=f"{identifier}",
+                    size_hint_y=None,
+                    height=50,
+                    background_color=(0, 1, 0, 1) if is_enrolled else (1, 1, 1, 1)  # green if enrolled
+                )
+
+                btn.bind(on_release=partial(
+                    self.identifier_selected, identifier, is_enrolled))
+
+                grid.add_widget(btn)
+
+
+            # Wrap in ScrollView
+            scrollview = ScrollView(
+                size_hint=(1, 1),
+                bar_width=10,
+                scroll_type=['bars', 'content'],
+                bar_color=(0.2, 0.2, 0.8, 1),  # Blue scrollbar
+                bar_inactive_color=(0.7, 0.7, 0.7, 1),
+                effect_cls='ScrollEffect'
             )
 
-            btn.bind(on_release=partial(
-                self.identifier_selected, identifier, is_enrolled))
+            scrollview.add_widget(grid)
 
-            grid.add_widget(btn)
+            # Create full content layout (ScrollView + Cancel button)
+            popup_layout = BoxLayout(orientation='vertical', spacing=10, padding=10)
+            popup_layout.add_widget(scrollview)
 
+            # Cancel button pinned at bottom
+            close_btn = Button(text="Cancel", size_hint=(1, None), height=50)
+            close_btn.bind(on_release=lambda instance: self.enroll_popup.dismiss())
+            popup_layout.add_widget(close_btn)
 
-        # Wrap in ScrollView
-        scrollview = ScrollView(
-            size_hint=(1, 1),
-            bar_width=10,
-            scroll_type=['bars', 'content'],
-            bar_color=(0.2, 0.2, 0.8, 1),  # Blue scrollbar
-            bar_inactive_color=(0.7, 0.7, 0.7, 1),
-            effect_cls='ScrollEffect'
-        )
+            # Create Popup
+            self.enroll_popup = Popup(title="Select Identifier to Enroll",
+                                    content=popup_layout,
+                                    size_hint=(1, 1),
+                                    auto_dismiss=False)
 
-        scrollview.add_widget(grid)
-
-        # Create full content layout (ScrollView + Cancel button)
-        popup_layout = BoxLayout(orientation='vertical', spacing=10, padding=10)
-        popup_layout.add_widget(scrollview)
-
-        # Cancel button pinned at bottom
-        close_btn = Button(text="Cancel", size_hint=(1, None), height=50)
-        close_btn.bind(on_release=lambda instance: self.enroll_popup.dismiss())
-        popup_layout.add_widget(close_btn)
-
-        # Create Popup
-        self.enroll_popup = Popup(title="Select Identifier to Enroll",
-                                  content=popup_layout,
-                                  size_hint=(1, 1),
-                                  auto_dismiss=False)
-
-        # Open popup
-        self.enroll_popup.open()
+            # Open popup
+            self.enroll_popup.open()
+        except Exception as e:
+            HelperUtils.logError(f"Enroll Start Error: {e}")
 
     def identifier_selected(self, identifier, is_enrolled, instance=None):
         self.selected_identifier = identifier

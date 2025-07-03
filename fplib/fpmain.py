@@ -503,6 +503,9 @@ class Fingerprint():
 
     def setTemplate(self, idx, data):
         with self.lock:
+            if HelperUtils.is_raspberry_pi() == False:
+                return True
+            
             data_bytes = bytearray()
             data_bytes.append(90)
             data_bytes.append(165)
@@ -541,6 +544,9 @@ class Fingerprint():
 
     def delete(self, idx):
         with self.lock:
+            if HelperUtils.is_raspberry_pi() == False:
+                return False
+
             if not isinstance(idx, int) or idx < 0:
                 raise RuntimeError("Invalid ID") 
             
@@ -553,6 +559,9 @@ class Fingerprint():
 
     def identify(self):
         with self.lock:
+            if HelperUtils.is_raspberry_pi() == False:
+                return None
+
             if not self.capture_finger(best=True):
                 return None
             if self._send_packet("Identify1_N"):
@@ -565,6 +574,8 @@ class Fingerprint():
 
     def identifyTemplate(self, data):
         with self.lock:
+            if HelperUtils.is_raspberry_pi() == False:
+                return None
             data_bytes = bytearray()
             data_bytes.append(90)
             data_bytes.append(165)
@@ -581,6 +592,9 @@ class Fingerprint():
 
     def check_enrolled(self, idx):
         with self.lock:
+            if HelperUtils.is_raspberry_pi() == False:
+                return False
+
             #Check if a fingerprint is enrolled at the given ID. 
             if not isinstance(idx, int) or idx < 0:
                 raise RuntimeError("Invalid ID") 
